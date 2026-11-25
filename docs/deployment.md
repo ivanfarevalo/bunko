@@ -14,15 +14,20 @@ the examples here use the recommended Tailscale setup.
 
 ## Install
 
-```bash
-uv tool install git+https://github.com/ivanfarevalo/bunko
-# or
-pipx install git+https://github.com/ivanfarevalo/bunko
-# or, from a clone, editable while you hack on it
-uv tool install --editable ./bunko
-```
+Python 3.8 or later is required, and nothing else.
 
-All three put a `bunko` command on your PATH. Python 3.8 or later is required.
+| Method | Command | Needs |
+|---|---|---|
+| Try it, no install | `uvx bunko` | [uv](https://docs.astral.sh/uv/) |
+| Install the command | `uv tool install bunko`, or `pipx install bunko` | uv or pipx |
+| Single file, no package manager | `curl -fsSL https://github.com/ivanfarevalo/bunko/releases/latest/download/install.sh \| sh` | curl |
+| Single file, by hand | Download `bunko.pyz` from the [latest release](https://github.com/ivanfarevalo/bunko/releases/latest), run `python3 bunko.pyz` | Nothing |
+| From a clone, editable | `uv tool install --editable ./bunko` | uv |
+
+The install script takes `BUNKO_VERSION=0.3.0` to pin a release, and
+`BUNKO_INSTALL_DIR` to install somewhere other than `~/.local/bin`. Upgrade
+with `uv tool upgrade bunko`, `pipx upgrade bunko`, or by running the script
+again.
 
 ## Optional tools
 
@@ -43,7 +48,7 @@ brew install ffmpeg ripgrep         # macOS
 ## In the foreground
 
 ```bash
-bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+bunko 8100 ~/reports --allow-user you@example.com
 ```
 
 Stop it with `Ctrl+C`.
@@ -55,10 +60,10 @@ up a service.
 
 ```bash
 # a new detached session
-tmux new-session -d -s bunko 'bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com'
+tmux new-session -d -s bunko 'bunko 8100 ~/reports --allow-user you@example.com'
 
 # or a window in a session you already use
-tmux new-window -d -t main -n bunko 'bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com'
+tmux new-window -d -t main -n bunko 'bunko 8100 ~/reports --allow-user you@example.com'
 
 tmux attach -t bunko     # look at it
 tmux kill-session -t bunko
@@ -70,7 +75,7 @@ command into it:
 
 ```bash
 tmux new-window -d -t main -n bunko
-tmux send-keys -t main:bunko 'bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com' Enter
+tmux send-keys -t main:bunko 'bunko 8100 ~/reports --allow-user you@example.com' Enter
 ```
 
 tmux doesn't survive a reboot. For that, use a service.
@@ -81,7 +86,7 @@ A user service needs no root. It starts when you log in (or at boot, with
 lingering), restarts after a crash, and logs to the journal.
 
 ```bash
-bunko service install --name reports -- 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+bunko service install --name reports -- 8100 ~/reports --allow-user you@example.com
 ```
 
 Everything after `--` is ordinary Bunko arguments. They're checked before
@@ -129,7 +134,7 @@ Build the zipapp once and copy one file:
 ```bash
 python3 scripts/build_pyz.py     # dist/bunko.pyz, about 130 KB
 scp dist/bunko.pyz server:bin/
-ssh server 'python3 ~/bin/bunko.pyz 8100 ~/reports -b 127.0.0.1'
+ssh server 'python3 ~/bin/bunko.pyz 8100 ~/reports'
 ```
 
 The `.pyz` is the whole app, front-end libraries included, so it works on

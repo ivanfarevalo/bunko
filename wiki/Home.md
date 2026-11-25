@@ -15,13 +15,13 @@ the [README](../README.md) covers installing and launching.
 
 ## Status
 
-**Version 0.3.0**, in daily use, not yet published. As of 2026-11-24:
+**Version 0.3.0**, in daily use. As of 2026-11-25:
 
-- The source is in its own Git repository, with uv, ruff, Biome, and
-  pre-commit set up.
+- Public at [github.com/ivanfarevalo/bunko](https://github.com/ivanfarevalo/bunko),
+  with CI on Linux and macOS and a tag-driven release workflow.
 - Renamed from "shelf" to **Bunko** (文庫, "a library" or "a collection of
   books" in Japanese) on 2026-11-24.
-- Next up: publish the repository, then make Word and Excel files searchable.
+- Next up: the first release to PyPI, then the companion for AI agents.
 
 ## Keeping the wiki current
 

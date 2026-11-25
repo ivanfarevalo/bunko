@@ -1,17 +1,17 @@
 # Security and access control
 
 Bunko only ever reads files. The question is **who can read them**. By default
-the answer is anyone who can reach the port, exactly as with
-`python -m http.server`. This page covers the ways to narrow that, strongest
-first.
+the answer is only people on the same machine: Bunko listens on `127.0.0.1`.
+Unlike `python -m http.server`, it's never open to the network unless you ask.
+This page covers the ways to reach it from elsewhere, strongest first.
 
 | Setup | Who gets in | Transport | Effort |
 |---|---|---|---|
 | [Tailscale Serve + `--allow-user`](#recommended-tailscale-serve-with-allowed-users) | Named people, by Tailscale identity | HTTPS | Two commands |
-| [Loopback + SSH forward](#local-only-with-an-ssh-tunnel) | Whoever can SSH to the machine | SSH | One flag, one tunnel |
+| [The default + SSH forward](#local-only-with-an-ssh-tunnel) | Whoever can SSH to the machine | SSH | One tunnel |
 | [Bind to your Tailscale IP](#bind-to-your-tailscale-address) | Every device on the tailnet | WireGuard | One flag |
 | [Access token](#access-token) | Anyone holding the token | Plain HTTP, unless something adds HTTPS | One flag |
-| Default | Anyone who can reach the port | Plain HTTP | None |
+| `-b 0.0.0.0` | Anyone who can reach the port, as with `http.server` | Plain HTTP | One flag |
 
 ## Always on
 
@@ -61,7 +61,7 @@ allow.
 
 ```bash
 # 1. bunko listens only on loopback, so nothing reaches it except through Tailscale
-bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+bunko 8100 ~/reports --allow-user you@example.com
 
 # 2. Tailscale serves it over HTTPS to your tailnet
 sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
@@ -111,10 +111,11 @@ tool on shared machines. See [Tailscale's ACL docs](https://tailscale.com/kb/101
 
 ## Local only, with an SSH tunnel
 
-If you already SSH into the machine, keep Bunko private to it and tunnel in:
+If you already SSH into the machine, keep Bunko private to it (the default)
+and tunnel in:
 
 ```bash
-bunko 8100 ~/reports -b 127.0.0.1          # on the server
+bunko 8100 ~/reports                       # on the server
 ssh -N -L 8100:127.0.0.1:8100 server        # on your laptop
 # open http://localhost:8100/
 ```
@@ -139,10 +140,10 @@ starts at boot. The service restarts until it does.
 ## Access token
 
 ```bash
-bunko 8100 ~/reports --token
+bunko 8100 ~/reports -b 0.0.0.0 --token     # or -b with one specific address
 ```
 
-On first use, Bunko creates a random token in `~/.config/bunko/token`
+A token is for reaching Bunko over a network, so pair it with `-b`. On first use, Bunko creates a random token in `~/.config/bunko/token`
 (readable only by you) and prints a sign-in link:
 
 ```

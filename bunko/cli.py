@@ -19,9 +19,10 @@ from .server import DEFAULT_PORT, Server, bind, make_handler
 EPILOG = """examples:
   bunko                          serve the current folder on port 8000 (or the next free one)
   bunko 8099 ~/reports           choose the port and folder
-  bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+  bunko 8100 ~/reports --allow-user you@example.com
                                  recommended on a shared network: put `tailscale serve` in front
-  bunko 8100 ~/reports --token   require an access token (bunko prints the link)
+  bunko 8100 ~/reports -b 0.0.0.0 --token
+                                 reachable from any network, with an access token
 
 subcommands:
   bunko service install|uninstall|status|logs|restart|list   run as a systemd user service
@@ -43,8 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-b",
         "--bind",
-        default="0.0.0.0",
-        help="address to listen on (default: all, like http.server)",
+        default="127.0.0.1",
+        help="address to listen on (default: 127.0.0.1, this machine only; 0.0.0.0 for every network)",
     )
     parser.add_argument("--hidden", action="store_true", help="also show and serve dotfiles")
 
@@ -213,6 +214,11 @@ def print_banner(server: Server, args) -> None:
     if mode == "tailscale":
         print(
             f"  put Tailscale in front:  tailscale serve --bg --https={port} http://127.0.0.1:{port}"
+        )
+    if is_loopback(args.bind) and mode != "tailscale":
+        print(
+            f"  only this machine can connect. From elsewhere: ssh -L {port}:localhost:{port} "
+            f"{socket.gethostname()}, or choose an address with -b (see docs/security.md)."
         )
     if mode == "open" and not is_loopback(args.bind):
         print(

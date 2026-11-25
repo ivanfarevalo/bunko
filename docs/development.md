@@ -179,7 +179,23 @@ checks for Markdown, Word documents, and tables.
 
 ## Releasing
 
-1. Bump `__version__` in `bunko/__init__.py` and add an entry to `CHANGELOG.md`.
-2. Run pre-commit and both test suites.
-3. `python3 scripts/build_pyz.py`, and attach `dist/bunko.pyz` to the GitHub release.
-4. Tag `vX.Y.Z`.
+Releases are built and published by `.github/workflows/release.yml` when a
+version tag is pushed:
+
+1. Bump `__version__` in `bunko/__init__.py`, and make sure `CHANGELOG.md` has
+   a `## X.Y.Z` section. It becomes the release notes.
+2. Run pre-commit and both test suites, and let CI pass on `main`.
+3. Tag and push:
+
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+
+The workflow checks the tag matches `__version__`, builds the wheel, the
+sdist, and `bunko.pyz`, and smoke-tests them. It publishes to PyPI, then
+creates the GitHub release with `bunko.pyz`, `install.sh`, and the packages
+attached.
+
+**PyPI publishing uses trusted publishing,** so no API token is stored. It
+was set up once on PyPI, as a publisher for the project `bunko`: owner
+`ivanfarevalo`, repository `bunko`, workflow `release.yml`, environment `pypi`.

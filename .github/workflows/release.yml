@@ -1,0 +1,74 @@
+# Push a tag such as v0.3.0 to publish that version: to PyPI, and as a GitHub
+# release carrying bunko.pyz and install.sh. See docs/development.md#releasing.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: Check the tag matches the version
+        run: |
+          version=$(uv run --no-project python -c "import bunko; print(bunko.__version__)")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match bunko.__version__ ($version)"
+            exit 1
+          fi
+      - run: uv run --no-project python scripts/release_notes.py "$GITHUB_REF_NAME" > release-notes.md
+      - run: uv build
+      - run: uv run --no-project python scripts/build_pyz.py
+      - name: Smoke-test the builds
+        run: |
+          uv run --no-project python dist/bunko.pyz --version
+          uv run --no-project --with dist/*.whl bunko --version
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: |
+            dist/
+            release-notes.md
+            install.sh
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/bunko
+    permissions:
+      id-token: write # trusted publishing: no API token is stored anywhere
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+      - name: Keep only the packages
+        run: rm -f dist/bunko.pyz
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github:
+    name: GitHub release
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "Bunko ${GITHUB_REF_NAME#v}" --notes-file release-notes.md \
+            dist/bunko.pyz install.sh dist/*.whl dist/*.tar.gz

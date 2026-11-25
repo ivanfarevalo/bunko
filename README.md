@@ -8,7 +8,7 @@ replacement for `python -m http.server`, with no dependencies beyond Python.
 
 *Bunko* (文庫) is Japanese for a small library, or a collection of books.
 
-![A folder in Bunko](docs/img/folder.png)
+![A folder in Bunko](https://raw.githubusercontent.com/ivanfarevalo/bunko/main/docs/img/folder.png)
 
 It's built for reading files where they live, usually on a remote machine:
 
@@ -23,21 +23,22 @@ It's built for reading files where they live, usually on a remote machine:
 
 ### 1. Install
 
-Python 3.8 or later. Nothing else is required.
+Bunko needs Python 3.8 or later, and nothing else. Pick whichever fits:
 
 ```bash
-uv tool install git+https://github.com/ivanfarevalo/bunko
-# or
-pipx install git+https://github.com/ivanfarevalo/bunko
+uvx bunko                  # try it without installing anything (needs uv)
+uv tool install bunko      # install the bunko command (or: pipx install bunko)
 ```
 
-On a machine where you can't install anything, copy one file instead:
+On a server without uv or pipx, this puts a single-file `bunko` in
+`~/.local/bin`, using only Python and curl:
 
 ```bash
-python3 scripts/build_pyz.py        # in a clone; writes dist/bunko.pyz
-scp dist/bunko.pyz server:
-ssh server python3 bunko.pyz 8099   # same options as the bunko command
+curl -fsSL https://github.com/ivanfarevalo/bunko/releases/latest/download/install.sh | sh
 ```
+
+Or copy `bunko.pyz` from the [latest release](https://github.com/ivanfarevalo/bunko/releases/latest)
+anywhere, and run it with `python3 bunko.pyz`.
 
 ### 2. Start it
 
@@ -53,9 +54,9 @@ Bunko prints the address to open, then serves until you press `Ctrl+C`.
 | Where Bunko runs | How to open it |
 |---|---|
 | Your own machine | Open the printed `http://localhost:8000/` |
-| A remote machine, just for you | `bunko 8099 ~/reports -b 127.0.0.1` there, then `ssh -L 8099:localhost:8099 server` here, and open `http://localhost:8099/` |
+| A remote machine, just for you | `bunko 8099 ~/reports` there, then `ssh -L 8099:localhost:8099 server` here, and open `http://localhost:8099/` |
 | A remote machine, for named people on your tailnet (recommended) | See [Security](#security) below |
-| A remote machine, behind a password-like token | `bunko 8099 ~/reports --token`, then open the link it prints |
+| A remote machine, behind a password-like token | `bunko 8099 ~/reports -b 0.0.0.0 --token`, then open the link it prints |
 
 ### 4. Keep it running (optional)
 
@@ -64,7 +65,7 @@ tmux new-session -d -s bunko 'bunko 8099 ~/reports'             # in tmux
 bunko service install --name reports -- 8099 ~/reports          # as a systemd user service
 ```
 
-[docs/deployment.md](docs/deployment.md) covers both, plus the optional tools
+[docs/deployment.md](https://github.com/ivanfarevalo/bunko/blob/main/docs/deployment.md) covers both, plus the optional tools
 that add thumbnails (ffmpeg) and fast content search (ripgrep).
 
 ## Features
@@ -94,44 +95,45 @@ that add thumbnails (ffmpeg) and fast content search (ripgrep).
 
 | | |
 |---|---|
-| ![Markdown with outline](docs/img/outline.png) | ![A large CSV](docs/img/table.png) |
-| ![Video review tools](docs/img/video.png) | ![Search inside files](docs/img/content-search.png) |
+| ![Markdown with outline](https://raw.githubusercontent.com/ivanfarevalo/bunko/main/docs/img/outline.png) | ![A large CSV](https://raw.githubusercontent.com/ivanfarevalo/bunko/main/docs/img/table.png) |
+| ![Video review tools](https://raw.githubusercontent.com/ivanfarevalo/bunko/main/docs/img/video.png) | ![Search inside files](https://raw.githubusercontent.com/ivanfarevalo/bunko/main/docs/img/content-search.png) |
 
 ## Security
 
 Bunko never changes the folder it serves, hides dotfiles (including through
-symlinks), and refuses path tricks. **By default, though, anyone who can reach the port can read the
-folder,** just as with `http.server`. Choose an access mode:
+symlinks), and refuses path tricks. **By default it listens only on this
+machine** (`127.0.0.1`). Reaching it from elsewhere is a choice you make:
 
 | Setup | Who gets in | Transport |
 |---|---|---|
 | **Tailscale Serve + `--allow-user` (recommended)** | Named people, by Tailscale identity | HTTPS |
-| `-b 127.0.0.1` + SSH port forward | Whoever can SSH in | SSH |
-| Bind to your Tailscale IP | Everyone on your tailnet | WireGuard |
-| `--token` | Anyone holding the token | Plain HTTP unless something adds HTTPS |
+| The default + an SSH port forward | Whoever can SSH in | SSH |
+| `-b <your Tailscale IP>` | Everyone on your tailnet | WireGuard |
+| `-b 0.0.0.0 --token` | Anyone holding the token | Plain HTTP unless something adds HTTPS |
+| `-b 0.0.0.0` | Anyone who can reach the port, as with `http.server` | Plain HTTP |
 
 The recommended setup takes two commands:
 
 ```bash
-bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+bunko 8100 ~/reports --allow-user you@example.com
 sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
 # open https://<machine>.<tailnet>.ts.net:8100/
 ```
 
-[docs/security.md](docs/security.md) explains each mode and its limits.
+[docs/security.md](https://github.com/ivanfarevalo/bunko/blob/main/docs/security.md) explains each mode and its limits.
 
 ## Documentation
 
-- [Features and shortcuts](docs/features.md)
-- [Security and access control](docs/security.md)
-- [Deployment: tmux, systemd, remote machines](docs/deployment.md)
-- [Command-line reference](docs/cli.md)
-- [Development: environment, linters, tests, practices](docs/development.md)
+- [Features and shortcuts](https://github.com/ivanfarevalo/bunko/blob/main/docs/features.md)
+- [Security and access control](https://github.com/ivanfarevalo/bunko/blob/main/docs/security.md)
+- [Deployment: tmux, systemd, remote machines](https://github.com/ivanfarevalo/bunko/blob/main/docs/deployment.md)
+- [Command-line reference](https://github.com/ivanfarevalo/bunko/blob/main/docs/cli.md)
+- [Development: environment, linters, tests, practices](https://github.com/ivanfarevalo/bunko/blob/main/docs/development.md)
 
-The [project wiki](wiki/Home.md) tracks what Bunko is, where it's going, how
+The [project wiki](https://github.com/ivanfarevalo/bunko/blob/main/wiki/Home.md) tracks what Bunko is, where it's going, how
 it's built, and what has been done so far, phase by phase.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Bundled front-end libraries keep their own
-licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. See [LICENSE](https://github.com/ivanfarevalo/bunko/blob/main/LICENSE). Bundled front-end libraries keep their own
+licenses: [THIRD_PARTY_NOTICES.md](https://github.com/ivanfarevalo/bunko/blob/main/THIRD_PARTY_NOTICES.md).

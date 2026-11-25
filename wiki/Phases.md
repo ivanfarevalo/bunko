@@ -102,7 +102,14 @@ easy to read and change.
 - The new name, **Bunko** (文庫, "a library" in Japanese): the command,
   package, config folders, URLs, and docs.
 
-**Still open.** Publishing to GitHub and PyPI.
+- Published at github.com/ivanfarevalo/bunko on 2026-11-25, with CI on Linux
+  and macOS (Python 3.8 to 3.13) and browser tests. Getting CI green found a
+  macOS-only test assumption, a hover race in the browser tests, and a newer
+  Chrome logging the blocked test injections; DOMPurify was updated to 3.5.0.
+- Listening on 127.0.0.1 by default, and a release workflow: PyPI by trusted
+  publishing, a GitHub release with `bunko.pyz`, and an `install.sh` one-liner.
+
+**Still open.** The first tagged release.
 
 ## What comes next
 

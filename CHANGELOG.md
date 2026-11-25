@@ -18,6 +18,8 @@
   with a tab per sheet and Excel's row numbers. Both are converted on the server
   with the standard library. Older `.doc` and `.xls` files explain why they
   don't open.
+- **Listens on 127.0.0.1 by default,** so a new server is private to its machine.
+  Reaching it from elsewhere takes `-b`, an SSH tunnel, or Tailscale Serve.
 - A new color palette, in light and dark.
 - DOMPurify updated to 3.5.0, for its sanitizer security fixes.
 - Paging through files with the arrow keys doesn't count toward Recent.

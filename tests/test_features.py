@@ -232,11 +232,14 @@ class TailscaleAccess(unittest.TestCase):
 
 
 class AccessArguments(unittest.TestCase):
+    def test_listens_on_this_machine_by_default(self):
+        self.assertEqual(parse_args([]).bind, "127.0.0.1")
+
     def test_allow_user_needs_loopback(self):
-        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-            parse_args(["--allow-user", "me@example.com"])
-        with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-            parse_args(["--allow-user", "me@example.com", "-b", "100.64.0.1"])
+        self.assertEqual(parse_args(["--allow-user", "me@example.com"]).bind, "127.0.0.1")
+        for address in ("0.0.0.0", "100.64.0.1"):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+                parse_args(["--allow-user", "me@example.com", "-b", address])
         args = parse_args(["--allow-user", "me@example.com", "-b", "127.0.0.1"])
         self.assertEqual(args.allow_user, ["me@example.com"])
         parse_args(["--allow-user", "me@example.com", "-b", "::1"])
@@ -675,7 +678,7 @@ class ServiceUnit(unittest.TestCase):
 
     def test_bad_arguments_are_refused(self):
         with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
-            service.serve_arguments(["--allow-user", "me@example.com"])  # not loopback
+            service.serve_arguments(["--allow-user", "me@example.com", "-b", "0.0.0.0"])
 
     def test_unit_quotes_and_escapes_percent(self):
         text = service.render_unit(

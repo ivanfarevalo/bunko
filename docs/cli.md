@@ -16,7 +16,7 @@ port.
 |---|---|---|
 | `-p, --port N` | 8000 | Port. Without one, Bunko uses 8000 or the next free port. With one, it fails if the port is taken. |
 | `-d, --directory DIR` | current folder | Folder to serve |
-| `-b, --bind ADDR` | `0.0.0.0` | Address to listen on. `127.0.0.1` keeps it local; a Tailscale IP limits it to the tailnet. |
+| `-b, --bind ADDR` | `127.0.0.1` | Address to listen on. The default keeps it to this machine; a Tailscale IP limits it to the tailnet; `0.0.0.0` opens it to every network. |
 | `--hidden` | off | Also list and serve dotfiles |
 | `--no-thumbnails` | off | Don't run ffmpeg for gallery thumbnails |
 | `--cache-dir DIR` | `~/.cache/bunko` | Where thumbnails are cached |
@@ -29,7 +29,7 @@ See [security.md](security.md). `--allow-user` and `--token` can't be combined.
 
 | Option | Meaning |
 |---|---|
-| `--allow-user LOGIN` | Allow this Tailscale user. Repeat it for more users; wildcards work (`'*@example.com'`). Requires `-b 127.0.0.1` (or another loopback address) and `tailscale serve` in front. |
+| `--allow-user LOGIN` | Allow this Tailscale user. Repeat it for more users; wildcards work (`'*@example.com'`). Requires a loopback address (the default) and `tailscale serve` in front. |
 | `--token` | Require an access token, creating one if needed |
 | `--new-token` | Replace the token, then start. Implies `--token`. |
 | `--token-file PATH` | Where the token lives (default `~/.config/bunko/token`) |

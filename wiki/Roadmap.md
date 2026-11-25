@@ -4,10 +4,12 @@ Where Bunko is going, in the order we expect to get there. The reasons behind
 the order are in [Goals and plan](Goals-and-Plan.md), and finished work moves
 to [Phases](Phases.md).
 
-## Now: publish
+## Now: first release
 
-- Publish the repository on GitHub, with CI running.
-- First tagged release with the `.pyz` attached.
+- Tag `v0.3.0`: PyPI (`uvx bunko`), and a GitHub release with `bunko.pyz` and
+  the `install.sh` one-liner. The workflow is in place.
+- A Docker image, built by the same workflow, for home servers and teams.
+- `bunko service` on macOS (launchd), and a check of Windows support.
 
 ## Next: a companion for AI agents
 

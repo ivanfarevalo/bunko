@@ -107,7 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bunko service",
         description="Run bunko as a systemd user service.",
-        epilog="Example: bunko service install --name docs -- 8100 ~/docs -b 127.0.0.1 --allow-user you@example.com",
+        epilog="Example: bunko service install --name docs -- 8100 ~/docs --allow-user you@example.com",
     )
     sub = parser.add_subparsers(dest="action", required=True)
     install = sub.add_parser("install", help="create, enable and start a service")
