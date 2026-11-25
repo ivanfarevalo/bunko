@@ -1089,11 +1089,15 @@ with sync_playwright() as p:
     phone.close()
 
     # Console noise that the deliberately broken fixtures cause on purpose.
+    # The malicious fixtures try a frame escape and inline handlers; the browser
+    # blocking them is the expected outcome (the injection checks above confirm
+    # nothing ran).
     expected = (
         "404",
         "416",
         "Failed to load resource",
         "Unsafe attempt to initiate navigation",
+        "Executing inline event handler violates the following Content Security Policy",
         "isn't a valid Office file",
     )
     unexpected = [e for e in errors if not any(text in e for text in expected)]

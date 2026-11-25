@@ -19,6 +19,7 @@
   with the standard library. Older `.doc` and `.xls` files explain why they
   don't open.
 - A new color palette, in light and dark.
+- DOMPurify updated to 3.5.0, for its sanitizer security fixes.
 - Paging through files with the arrow keys doesn't count toward Recent.
 - Dropped browser connections no longer print tracebacks.
 - Bunko's first write endpoint (`/__bunko/api/places`), protected against
