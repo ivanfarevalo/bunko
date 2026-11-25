@@ -2,7 +2,7 @@
 """Drive the UI in real Chrome against a demo tree.
 
 python3 tests/make_demo.py DEMO
-uv run --no-project --with playwright python tests/e2e.py DEMO SHOTS_DIR
+uv run python tests/e2e.py DEMO SHOTS_DIR
 """
 
 import atexit
@@ -17,6 +17,7 @@ import time
 import urllib.error
 import urllib.request
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
 demo = pathlib.Path(sys.argv[1]).resolve()
@@ -96,6 +97,18 @@ with sync_playwright() as p:
     def go(path):
         page.goto(f"{base}/#/{path}")
         page.wait_for_timeout(350)
+
+    def hover_click(row, selector):
+        # Row tools show on hover. If the sidebar redraws under a still mouse,
+        # the new row isn't hovered until the mouse moves, so hover again.
+        for _ in range(5):
+            row.hover()
+            try:
+                row.locator(selector).click(timeout=2000)
+                return
+            except PlaywrightTimeout:
+                page.mouse.move(0, 0)
+        row.locator(selector).click()
 
     print("root folder")
     page.goto(base)
@@ -856,8 +869,7 @@ with sync_playwright() as p:
     )
 
     row = page.locator("#places section:has([data-section=recent]) .place-row", has_text="guide.md")
-    row.hover()
-    row.locator(".row-x").click()
+    hover_click(row, ".row-x")
     wait_js(
         "![...document.querySelectorAll('#places section')].find(s => s.querySelector('[data-section=recent]'))?.textContent.includes('guide.md')"
     )
@@ -945,10 +957,9 @@ with sync_playwright() as p:
     page.wait_for_selector("#places [data-section=favorites]")
     check("nicknames are kept on the server", fav_label() == "Team guide")
     row = page.locator("#places section:has([data-section=favorites]) .place-row")
-    row.hover()
     dialogs = []
     page.on("dialog", lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
-    row.locator("button[aria-label='Rename (nickname)']").click()
+    hover_click(row, "button[aria-label='Rename (nickname)']")
     page.wait_for_selector("#starmenu input")
     menu, side = page.locator("#starmenu").bounding_box(), page.locator("#sidebar").bounding_box()
     check(

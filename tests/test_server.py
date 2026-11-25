@@ -2,6 +2,7 @@
 
 import http.client
 import json
+import os
 import pathlib
 import socket
 import sys
@@ -338,14 +339,21 @@ class Api(ServerCase):
 
 class Helpers(unittest.TestCase):
     def test_hidden_rule_only_counts_what_is_below_the_shared_path(self):
-        root = Root("/home/me/.cache/demo/tree", False)
-        self.assertTrue(root.allowed_target("/home/me/.cache/demo/tree"))
-        self.assertTrue(root.allowed_target("/home/me/.cache/demo/tree/a/b.txt"))
-        self.assertTrue(root.allowed_target("/home/me/.cache/demo/other/b.txt"))
-        self.assertTrue(root.allowed_target("/mnt/data/exp"))
-        self.assertFalse(root.allowed_target("/home/me/.cache/demo/tree/.git/config"))
-        self.assertFalse(root.allowed_target("/home/me/.ssh/id_rsa"))
-        self.assertFalse(root.allowed_target("/mnt/data/.private/key"))
+        # Real folders, because Root resolves symlinks (macOS's /home and /tmp are links).
+        with tempfile.TemporaryDirectory() as tmp:
+            home = os.path.join(os.path.realpath(tmp), "me")
+            tree = os.path.join(home, ".cache", "demo", "tree")
+            os.makedirs(tree)
+            root = Root(tree, False)
+            self.assertTrue(root.allowed_target(tree))
+            self.assertTrue(root.allowed_target(os.path.join(tree, "a", "b.txt")))
+            self.assertTrue(
+                root.allowed_target(os.path.join(home, ".cache", "demo", "other", "b.txt"))
+            )
+            self.assertTrue(root.allowed_target("/mnt/data/exp"))
+            self.assertFalse(root.allowed_target(os.path.join(tree, ".git", "config")))
+            self.assertFalse(root.allowed_target(os.path.join(home, ".ssh", "id_rsa")))
+            self.assertFalse(root.allowed_target("/mnt/data/.private/key"))
 
     def test_natural_key_compares_the_stem_first(self):
         names = ["clip10.mp4", "clip2.webm", "clip.mp4", "frame_10.png", "frame_2.png"]
