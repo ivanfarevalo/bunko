@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shelf-server"
+dynamic = ["version"]
+description = "A read-only file server with a Notion-style UI: a drop-in for python -m http.server"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Ivan Arevalo" }]
+requires-python = ">=3.8"
+dependencies = []
+keywords = ["http.server", "file server", "file browser", "markdown", "viewer", "tailscale"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: System :: Filesystems",
+]
+
+[project.urls]
+Homepage = "https://github.com/ivanfarevalo/shelf"
+Documentation = "https://github.com/ivanfarevalo/shelf/tree/main/docs"
+Issues = "https://github.com/ivanfarevalo/shelf/issues"
+Changelog = "https://github.com/ivanfarevalo/shelf/blob/main/CHANGELOG.md"
+
+[project.scripts]
+shelf = "shelf.cli:main"
+
+[tool.setuptools]
+packages = ["shelf"]
+
+[tool.setuptools.dynamic]
+version = { attr = "shelf.__version__" }
+
+[tool.setuptools.package-data]
+shelf = ["static/*", "static/vendor/*", "static/vendor/LICENSES/*"]

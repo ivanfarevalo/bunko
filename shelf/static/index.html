@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>shelf</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23787774' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h16M6 20V5h4v15M10 20V8h4v12M15 20l-1-11 4-.5 1.500 11.500'/%3E%3C/svg%3E">
+  <script src="/__shelf/static/theme.js"></script>
+  <link rel="stylesheet" href="/__shelf/static/style.css">
+</head>
+<body>
+  <div id="scrim"></div>
+  <aside id="sidebar" aria-label="Files">
+    <div class="side-head">
+      <a id="root-link" href="#/" title="Open the top folder"><span id="root-name"></span></a>
+      <button id="collapse" class="icon-btn" title="Hide sidebar (Ctrl+\)" aria-label="Hide sidebar"></button>
+    </div>
+    <label class="search">
+      <span id="search-icon"></span>
+      <input id="q" type="search" placeholder="Search file names" autocomplete="off" spellcheck="false" aria-label="Search files">
+      <kbd id="search-key"></kbd>
+    </label>
+    <div class="search-modes" role="tablist" aria-label="Search in">
+      <button data-mode="names" class="on" role="tab" aria-selected="true">Names</button>
+      <button data-mode="contents" role="tab" aria-selected="false">Contents</button>
+    </div>
+    <div id="browse">
+      <div id="places" aria-label="Recent, favorites and tags"></div>
+      <section class="place" id="files-section">
+        <div id="files-head" class="place-head" role="button" tabindex="0" hidden></div>
+        <nav id="tree" aria-label="Folder tree"></nav>
+      </section>
+    </div>
+    <div id="results" hidden></div>
+    <div id="foot"><span id="foot-text"></span><button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings"></button></div>
+    <div id="resizer" title="Drag to resize"></div>
+  </aside>
+  <main>
+    <header id="topbar">
+      <button id="expand" class="icon-btn" title="Show sidebar (Ctrl+\)" aria-label="Show sidebar"></button>
+      <nav id="crumbs" aria-label="Path"></nav>
+      <span id="chips"></span>
+      <span id="meta"></span>
+      <div id="actions"></div>
+    </header>
+    <section id="view" tabindex="-1"></section>
+  </main>
+  <script src="/__shelf/static/vendor/marked.js"></script>
+  <script src="/__shelf/static/vendor/purify.js"></script>
+  <script src="/__shelf/static/vendor/highlight.js"></script>
+  <script src="/__shelf/static/app.js"></script>
+</body>
+</html>
