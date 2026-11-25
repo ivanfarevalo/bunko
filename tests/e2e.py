@@ -83,7 +83,13 @@ with sync_playwright() as p:
     page = context.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append("pageerror: " + str(e)))
-    page.on("console", lambda m: errors.append("console: " + m.text) if m.type == "error" else None)
+
+    def console_error(message):
+        if message.type == "error":
+            where = message.location.get("url", "")
+            errors.append(f"console: {message.text} (at {where or page.url})")
+
+    page.on("console", console_error)
 
     def wait_js(expression, timeout=10000):
         # Not page.wait_for_function: it needs eval, which the app's CSP blocks,
