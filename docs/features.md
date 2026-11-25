@@ -176,6 +176,8 @@ Fonts, colors, page layout, headers and footers, comments, text boxes, and
 charts aren't shown. Neither are tracked deletions. Images in formats browsers
 can't display (EMF, WMF, TIFF) show as a placeholder.
 
+![A Word document with its outline](img/word.png)
+
 **Excel (`.xlsx`, `.xlsm`, `.xltx`)** opens in the [table viewer](#tables), so
 it sorts and filters like a CSV:
 
@@ -191,6 +193,8 @@ it sorts and filters like a CSV:
   line says what's shown.
 
 Charts, pivot tables, cell formatting, and merged-cell layout aren't shown.
+
+![An Excel workbook, with its sheet tabs](img/excel.png)
 
 Older formats (`.doc`, `.xls`) and PowerPoint files show a download card
 instead. Saving them as `.docx` or `.xlsx` makes them open in shelf. A file

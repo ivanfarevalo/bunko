@@ -15,6 +15,7 @@
   with a tab per sheet and Excel's row numbers. Both are converted on the server
   with the standard library. Older `.doc` and `.xls` files explain why they
   don't open.
+- A new color palette, in light and dark.
 - Paging through files with the arrow keys doesn't count toward Recent.
 - Dropped browser connections no longer print tracebacks.
 - shelf's first write endpoint (`/__shelf/api/places`), protected against
@@ -46,6 +47,6 @@
 
 ## 0.1.0
 
-- First version: a Notion-style browser for a folder, with Markdown, HTML,
+- First version: a browser UI for a folder, with Markdown, HTML,
   images, video, CSV and TSV tables, PDF, code, and text viewers, name search,
   live reload, dotfile protection, and range requests.

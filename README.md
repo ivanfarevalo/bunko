@@ -1,19 +1,69 @@
 # shelf
 
-**A read-only file server with a Notion-style UI.** It's a drop-in replacement for
-`python -m http.server`: your folders sit in a sidebar, and Markdown, HTML,
-images, video, CSV and JSONL tables, Word documents, Excel workbooks, PDFs,
-code, and logs render in the main pane. There's a single Python file to copy, with no dependencies.
+**A read-only file server that renders what it serves.** Point it at a folder
+and open it in a browser: Markdown, HTML reports, Word documents, Excel
+workbooks, CSV and JSONL tables, images, video, PDFs, code, and logs all open
+in place, with the folder tree and search in a sidebar. It's a drop-in
+replacement for `python -m http.server`, with no dependencies beyond Python.
 
 ![A folder in shelf](docs/img/folder.png)
 
+It's built for reading files where they live, usually on a remote machine:
+
+- **Results and reports** from experiments, training runs, and pipelines:
+  plots, tables, logs, videos, and HTML reports, without copying anything back.
+- **Plans, notes, and reports written by AI coding agents** such as Claude Code.
+  They render as they're written, and stay on your own machine.
+- **A shared, read-only document folder** for a small team, with search and
+  personal favorites and tags.
+
+## Launch it
+
+### 1. Install
+
+Python 3.8 or later. Nothing else is required.
+
 ```bash
-shelf                  # serve the current folder on port 8000 (or the next free one)
-shelf 8099 ~/reports   # choose the port and folder
+uv tool install git+https://github.com/ivanfarevalo/shelf
+# or
+pipx install git+https://github.com/ivanfarevalo/shelf
 ```
 
-I built it for viewing experiment output on remote machines: plots, reports,
-logs, videos, and tables, from a browser, without copying anything back.
+On a machine where you can't install anything, copy one file instead:
+
+```bash
+python3 scripts/build_pyz.py        # in a clone; writes dist/shelf.pyz
+scp dist/shelf.pyz server:
+ssh server python3 shelf.pyz 8099   # same options as the shelf command
+```
+
+### 2. Start it
+
+```bash
+shelf                  # serve the current folder on port 8000, or the next free one
+shelf 8099 ~/reports   # choose the port and the folder
+```
+
+shelf prints the address to open, then serves until you press `Ctrl+C`.
+
+### 3. Open it
+
+| Where shelf runs | How to open it |
+|---|---|
+| Your own machine | Open the printed `http://localhost:8000/` |
+| A remote machine, just for you | `shelf 8099 ~/reports -b 127.0.0.1` there, then `ssh -L 8099:localhost:8099 server` here, and open `http://localhost:8099/` |
+| A remote machine, for named people on your tailnet (recommended) | See [Security](#security) below |
+| A remote machine, behind a password-like token | `shelf 8099 ~/reports --token`, then open the link it prints |
+
+### 4. Keep it running (optional)
+
+```bash
+tmux new-session -d -s shelf 'shelf 8099 ~/reports'             # in tmux
+shelf service install --name reports -- 8099 ~/reports          # as a systemd user service
+```
+
+[docs/deployment.md](docs/deployment.md) covers both, plus the optional tools
+that add thumbnails (ffmpeg) and fast content search (ripgrep).
 
 ## Features
 
@@ -45,23 +95,6 @@ logs, videos, and tables, from a browser, without copying anything back.
 | ![Markdown with outline](docs/img/outline.png) | ![A large CSV](docs/img/table.png) |
 | ![Video review tools](docs/img/video.png) | ![Search inside files](docs/img/content-search.png) |
 
-## Install
-
-Requires Python 3.8 or later. ffmpeg, ffprobe, and ripgrep are optional (see
-[deployment](docs/deployment.md#optional-tools)).
-
-```bash
-uv tool install git+https://github.com/ivanfarevalo/shelf    # or: pipx install git+https://...
-```
-
-On a machine where you can't install anything, build the single file and copy it:
-
-```bash
-python3 scripts/build_pyz.py          # writes dist/shelf.pyz (about 130 KB)
-scp dist/shelf.pyz server:
-ssh server python3 shelf.pyz 8099
-```
-
 ## Security
 
 shelf never changes the folder it serves, hides dotfiles (including through
@@ -91,8 +124,10 @@ sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
 - [Security and access control](docs/security.md)
 - [Deployment: tmux, systemd, remote machines](docs/deployment.md)
 - [Command-line reference](docs/cli.md)
-- [Roadmap, including "ask your files" with LLMs](docs/roadmap.md)
-- [Development](docs/development.md)
+- [Development: environment, linters, tests, practices](docs/development.md)
+
+The [project wiki](wiki/Home.md) tracks what shelf is, where it's going, how
+it's built, and what has been done so far, phase by phase.
 
 ## License
 

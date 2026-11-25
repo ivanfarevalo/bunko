@@ -1,9 +1,32 @@
 # Roadmap
 
-shelf started as a nicer `http.server`. The direction is a private, read-only
-window onto a working folder that can also **answer questions about it**.
+Where shelf is going, in the order we expect to get there. The reasons behind
+the order are in [Goals and plan](Goals-and-Plan.md), and finished work moves
+to [Phases](Phases.md).
 
-## Next: ask your files
+## Now: publish
+
+- Choose the name, then rename the package, command, and docs.
+- Publish the repository on GitHub, with CI running.
+- First tagged release with the `.pyz` attached.
+
+## Next: a companion for AI agents
+
+AI coding agents write plans, notes, and HTML reports into the folders shelf
+serves. A few small features make shelf the natural place to read them:
+
+- **`shelf link <path>`** prints the app URL for a file, so an agent can end
+  its work with a link instead of a path. A line in an agent's instructions
+  (for example `CLAUDE.md`) is enough to use it.
+- **A "Changed recently" section** in the sidebar: files modified in the last
+  few hours, so what an agent just wrote is one click away.
+- **Word and Excel in content search.** The text is already extracted for
+  viewing (`shelf/office/`). Content search needs to use it, because ripgrep
+  can't see inside the zip.
+- **Tag rename and delete in the same in-app box** as favorites, replacing the
+  browser's prompt and confirm dialogs.
+
+## Then: ask your files
 
 An **Ask** panel next to search, where you type a question in plain language
 ("which runs used the 480x864 input, and what did they score?") and get an
@@ -70,6 +93,17 @@ These hold before anything ships:
 - **Local-first:** a local endpoint is a first-class option, not an
   afterthought, for folders that must not leave the machine.
 
+## Later: team use
+
+What a team or organization would need beyond today's access modes:
+
+- **Per-folder permissions,** so one server can share some folders with some
+  people.
+- **Simpler sign-in** for people outside a tailnet, such as single sign-on.
+- **PowerPoint (`.pptx`)** as a slide-by-slide view, and older Office formats
+  through an optional converter.
+- **An audit log** of who opened what, for folders that need one.
+
 ## Other ideas
 
 - **Annotation overlays.** Draw boxes from COCO or YOLO label files on images
@@ -77,11 +111,6 @@ These hold before anything ships:
 - **Side-by-side compare** of two images, two videos in sync, or two text files
   as a diff.
 - **Jupyter notebooks** rendered with their outputs.
-- **Word and Excel in content search,** and so in Ask. The text is already
-  extracted for viewing (`shelf/office.py`), but content search doesn't use it
-  yet, because ripgrep can't see inside the zip.
-- **PowerPoint (`.pptx`)** as a slide-by-slide view of each slide's text and
-  images.
 - **Diagrams and math** in Markdown (Mermaid, KaTeX), loaded only when a page
   uses them.
 - **Thumbnail cache pruning,** by age or total size.
@@ -90,4 +119,4 @@ These hold before anything ships:
 - **Smart sections**, such as "modified today" or "every PLAN.md", defined by a
   saved search.
 
-Suggestions and pull requests are welcome. See [development.md](development.md).
+Suggestions and pull requests are welcome. See [docs/development.md](../docs/development.md).
