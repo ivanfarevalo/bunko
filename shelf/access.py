@@ -10,6 +10,7 @@ Three modes:
   lives in a cookie. Weaker: it's a shared secret, and plain HTTP exposes it to
   anyone who can watch the network.
 """
+
 from __future__ import annotations
 
 import fnmatch
@@ -18,18 +19,17 @@ import hmac
 import ipaddress
 import os
 import secrets
+from contextlib import suppress
+from dataclasses import dataclass
 from email.header import decode_header
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from urllib.parse import urlencode
+
+from .storage import config_dir, write_private
 
 IDENTITY_HEADER = "Tailscale-User-Login"
 NAME_HEADER = "Tailscale-User-Name"
 COOKIE_AGE = 365 * 24 * 3600
-
-
-def config_dir() -> str:
-    base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
-    return os.path.join(base, "shelf")
 
 
 def default_token_path() -> str:
@@ -49,7 +49,7 @@ def decode_rfc2047(value: str) -> str:
     """Tailscale may send non-ASCII names as =?utf-8?q?...?=."""
     try:
         parts = decode_header(value)
-    except Exception:
+    except (ValueError, LookupError):
         return value
     return "".join(
         part.decode(charset or "utf-8", "replace") if isinstance(part, bytes) else part
@@ -81,13 +81,7 @@ class TokenStore:
         if self.env:
             raise SystemExit("shelf: the token comes from SHELF_TOKEN; change it there")
         token = secrets.token_urlsafe(24)
-        os.makedirs(os.path.dirname(self.path), mode=0o700, exist_ok=True)
-        temp = self.path + ".tmp"
-        # Created 0600 from the start, never briefly world-readable.
-        handle = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(handle, "w") as out:
-            out.write(token + "\n")
-        os.replace(temp, self.path)
+        write_private(self.path, token + "\n")
         return token
 
     def current(self) -> str | None:
@@ -105,18 +99,24 @@ class TokenStore:
         return self._token
 
 
+@dataclass
 class Decision:
-    def __init__(self, allowed: bool, user: str | None = None, reason: str = ""):
-        self.allowed = allowed
-        self.user = user
-        self.reason = reason
-        self.login: str | None = None  # Tailscale login, when known
-        self.cookie: str | None = None  # Set-Cookie value to send
-        self.clean_url: str | None = None  # redirect here to drop ?token= from the address bar
+    """The answer to "may this request go ahead?", and what to send with it."""
+
+    allowed: bool
+    user: str | None = None  # display name, shown in the app
+    reason: str = ""  # why not, when refused
+    login: str | None = None  # Tailscale login, which keys per-person state
+    cookie: str | None = None  # a Set-Cookie value to send
+    clean_url: str | None = None  # redirect here to drop ?token= from the address bar
 
 
 class Access:
-    def __init__(self, mode: str = "open", port: int = 0, tokens: TokenStore | None = None, users=()):
+    """The access mode in force, and the check every request goes through."""
+
+    def __init__(
+        self, mode: str = "open", port: int = 0, tokens: TokenStore | None = None, users=()
+    ):
         self.mode = mode
         self.port = port
         self.tokens = tokens
@@ -127,18 +127,18 @@ class Access:
     @property
     def cookie_name(self) -> str:
         # Cookies are shared by every port on a host, so name ours by port.
-        return "shelf_%d" % self.port
+        return f"shelf_{self.port}"
 
     def session_value(self, token: str) -> str:
         # The cookie holds a derivative, so the raw token never sits in it.
         return hmac.new(token.encode(), b"shelf-session-v1", hashlib.sha256).hexdigest()
 
     def session_cookie(self, token: str) -> str:
-        return "%s=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax" % (
-            self.cookie_name, self.session_value(token), COOKIE_AGE)
+        value = self.session_value(token)
+        return f"{self.cookie_name}={value}; Path=/; Max-Age={COOKIE_AGE}; HttpOnly; SameSite=Lax"
 
     def logout_cookie(self) -> str:
-        return "%s=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax" % self.cookie_name
+        return f"{self.cookie_name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
 
     def user_allowed(self, login: str) -> bool:
         login = login.lower()
@@ -147,21 +147,24 @@ class Access:
     # -- the check -------------------------------------------------------
 
     def decide(self, headers, raw_path: str, query: dict, navigating: bool) -> Decision:
-        """raw_path is the still-percent-encoded request path, reused in redirects."""
+        """Check a request. raw_path is still percent-encoded, for use in redirects."""
         if self.mode == "open":
             return Decision(True)
         if self.mode == "tailscale":
-            login = headers.get(IDENTITY_HEADER)
-            if not login:
-                return Decision(False, reason="no-identity")
-            login = decode_rfc2047(login)
-            if not self.user_allowed(login):
-                return Decision(False, user=login, reason="not-allowed")
-            name = headers.get(NAME_HEADER)
-            decision = Decision(True, user=decode_rfc2047(name) if name else login)
-            decision.login = login.lower()  # keys this person's favorites and tags
-            return decision
+            return self._tailscale(headers)
+        return self._token(headers, raw_path, query, navigating)
 
+    def _tailscale(self, headers) -> Decision:
+        login = headers.get(IDENTITY_HEADER)
+        if not login:
+            return Decision(False, reason="no-identity")
+        login = decode_rfc2047(login)
+        if not self.user_allowed(login):
+            return Decision(False, user=login, reason="not-allowed")
+        name = headers.get(NAME_HEADER)
+        return Decision(True, user=decode_rfc2047(name) if name else login, login=login.lower())
+
+    def _token(self, headers, raw_path: str, query: dict, navigating: bool) -> Decision:
         token = self.tokens.current()
         if not token:
             return Decision(False, reason="no-token-configured")
@@ -171,8 +174,7 @@ class Access:
         if offered is not None:
             if not hmac.compare_digest(offered.encode(), token.encode()):
                 return Decision(False, reason="bad-token")
-            decision = Decision(True)
-            decision.cookie = self.session_cookie(token)
+            decision = Decision(True, cookie=self.session_cookie(token))
             if navigating:
                 rest = {key: values for key, values in query.items() if key != "token"}
                 decision.clean_url = raw_path + ("?" + urlencode(rest, doseq=True) if rest else "")
@@ -185,23 +187,21 @@ class Access:
             return Decision(False, reason="bad-token")
 
         cookies = SimpleCookie()
-        try:
+        with suppress(CookieError):
             cookies.load(headers.get("Cookie", ""))
-        except Exception:
-            pass
         morsel = cookies.get(self.cookie_name)
         if morsel and hmac.compare_digest(morsel.value.encode(), expected.encode()):
             return Decision(True)
         return Decision(False, reason="no-session")
 
 
-# Filled with .replace("{message}", ...): the CSS is full of % signs.
+# Filled in with .replace("{message}", ...) rather than %-formatting, because the CSS has % signs.
 LOGIN_PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shelf · sign in</title>
 <style>
-:root{--bg:#fff;--text:#37352f;--muted:#787774;--line:rgba(55,53,47,.16);--accent:#2383e2;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#191919;--text:rgba(255,255,255,.84);--muted:#9b9b9b;--line:rgba(255,255,255,.14);--accent:#529cca;color-scheme:dark}}
+:root{--bg:#fff;--text:#1e2329;--muted:#5d6670;--line:rgba(30,35,41,.16);--accent:#0e7c86;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#15171a;--text:#e3e6ea;--muted:#9aa3ad;--line:rgba(227,230,234,.14);--accent:#2a8f99;color-scheme:dark}}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;padding:16px}
 main{width:min(380px,100%)}h1{font-size:22px;margin:0 0 6px}p{color:var(--muted);margin:0 0 18px}
 input{width:100%;height:38px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}
@@ -216,8 +216,8 @@ DENIED_PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shelf · no access</title>
 <style>
-:root{--bg:#fff;--text:#37352f;--muted:#787774;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#191919;--text:rgba(255,255,255,.84);--muted:#9b9b9b;color-scheme:dark}}
+:root{--bg:#fff;--text:#1e2329;--muted:#5d6670;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#15171a;--text:#e3e6ea;--muted:#9aa3ad;color-scheme:dark}}
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;padding:16px}
 main{width:min(440px,100%)}h1{font-size:22px;margin:0 0 6px}p{color:var(--muted)}
 </style></head><body><main><h1>No access</h1><p>{message}</p></main></body></html>"""

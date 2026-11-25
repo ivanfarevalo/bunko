@@ -4,6 +4,7 @@ Both are optional. Without ffmpeg the gallery falls back to full-size images
 and generic video icons; without ffprobe the video tools estimate frame rate in
 the browser.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -14,16 +15,14 @@ import subprocess
 import threading
 from collections import OrderedDict
 
+from .storage import cache_dir
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".avif", ".tif", ".tiff"}
 VIDEO_EXTS = {".mp4", ".webm", ".mov", ".m4v", ".mkv", ".avi", ".ogv"}
 SMALL_IMAGE = 96 * 1024  # serve these as they are: a thumbnail would barely help
 THUMB_WIDTH = 360
 TIMEOUT = 30
-
-
-def cache_dir() -> str:
-    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-    return os.path.join(base, "shelf")
+PROBE_CACHE = 2000  # videos remembered by the prober
 
 
 def kind_of(path: str) -> str | None:
@@ -42,6 +41,8 @@ def file_url(real: str) -> str:
 
 
 class Thumbnails:
+    """Small JPEGs of large images and of video frames, cached on disk by content."""
+
     def __init__(self, directory: str | None = None, enabled: bool = True):
         self.ffmpeg = shutil.which("ffmpeg") if enabled else None
         self.directory = os.path.join(directory or cache_dir(), "thumbs")
@@ -53,11 +54,11 @@ class Thumbnails:
         return self.ffmpeg is not None
 
     def key(self, real: str, info: os.stat_result) -> str:
-        raw = "%s\0%d\0%d\0%d" % (real, info.st_mtime_ns, info.st_size, THUMB_WIDTH)
+        raw = f"{real}\0{info.st_mtime_ns}\0{info.st_size}\0{THUMB_WIDTH}"
         return hashlib.sha1(raw.encode("utf-8", "surrogateescape")).hexdigest()
 
     def get(self, real: str):
-        """Return (path to send, is_original) or None when there is no thumbnail."""
+        """(path to send, is_original), or None when there's no thumbnail."""
         kind = kind_of(real)
         if kind is None:
             return None
@@ -78,16 +79,17 @@ class Thumbnails:
             if os.path.exists(out):  # another request made it while we waited
                 return out, False
             os.makedirs(folder, exist_ok=True)
-            temp = "%s.%d.%d.jpg" % (out, os.getpid(), threading.get_ident())
+            temp = f"{out}.{os.getpid()}.{threading.get_ident()}.jpg"
+            # A video's first frame is often black, so try one second in first.
             seeks = ("1", "0") if kind == "video" else (None,)
             for seek in seeks:
                 if self._run(real, temp, seek) and os.path.getsize(temp) > 0:
                     os.replace(temp, out)
                     return out, False
-            for leftover in (temp,):
-                if os.path.exists(leftover):
-                    os.remove(leftover)
-            open(failed, "w").close()
+            if os.path.exists(temp):
+                os.remove(temp)
+            with open(failed, "w"):
+                pass  # remembered, so a file ffmpeg can't read isn't retried on every view
             return None
 
     def _run(self, real: str, out: str, seek: str | None) -> bool:
@@ -95,14 +97,20 @@ class Thumbnails:
         if seek:
             command += ["-ss", seek]
         command += [
-            "-i", file_url(real),
-            "-frames:v", "1",
-            "-vf", "scale=w='min(%d,iw)':h=-2" % THUMB_WIDTH,
-            "-q:v", "5",
+            "-i",
+            file_url(real),
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale=w='min({THUMB_WIDTH},iw)':h=-2",
+            "-q:v",
+            "5",
             out,
         ]
         try:
-            done = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
+            done = subprocess.run(
+                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT
+            )
         except (OSError, subprocess.TimeoutExpired):
             return False
         return done.returncode == 0 and os.path.exists(out)
@@ -126,9 +134,16 @@ class Prober:
                 self.cache.move_to_end(key)
                 return self.cache[key]
         command = [
-            self.ffprobe, "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=codec_name,width,height,avg_frame_rate,r_frame_rate,nb_frames:format=duration",
-            "-of", "json", file_url(real),
+            self.ffprobe,
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=codec_name,width,height,avg_frame_rate,r_frame_rate,nb_frames:format=duration",
+            "-of",
+            "json",
+            file_url(real),
         ]
         try:
             done = subprocess.run(command, capture_output=True, timeout=TIMEOUT)
@@ -140,13 +155,16 @@ class Prober:
             "codec": stream.get("codec_name"),
             "width": stream.get("width"),
             "height": stream.get("height"),
-            "fps": self._rate(stream.get("avg_frame_rate")) or self._rate(stream.get("r_frame_rate")),
-            "frames": int(stream["nb_frames"]) if str(stream.get("nb_frames", "")).isdigit() else None,
+            "fps": self._rate(stream.get("avg_frame_rate"))
+            or self._rate(stream.get("r_frame_rate")),
+            "frames": int(stream["nb_frames"])
+            if str(stream.get("nb_frames", "")).isdigit()
+            else None,
             "duration": float(data.get("format", {}).get("duration") or 0) or None,
         }
         with self.lock:
             self.cache[key] = result
-            while len(self.cache) > 2000:
+            while len(self.cache) > PROBE_CACHE:
                 self.cache.popitem(last=False)
         return result
 

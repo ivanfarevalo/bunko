@@ -1,0 +1,32 @@
+# Install once with `uv run pre-commit install`; then these run on every commit.
+# Run them over everything with `uv run pre-commit run --all-files`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^shelf/static/vendor/
+      - id: end-of-file-fixer
+        exclude: ^shelf/static/vendor/
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=600]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: ^shelf/static/vendor/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.6.8
+    hooks:
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome@2.6.8"]
+        files: ^shelf/static/[^/]+\.(js|css|json)$

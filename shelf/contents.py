@@ -4,6 +4,7 @@ Uses ripgrep when installed (fast, skips binaries), else a pure-Python scan of
 the name index. Either way every hit passes the same access check as a file
 request, so a symlink cannot leak a dotfile's contents into results.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,18 +14,42 @@ import subprocess
 import threading
 import time
 
+from .index import SKIP_DIRS
+from .media import IMAGE_EXTS, VIDEO_EXTS
+from .paths import Blocked
+
 LIMIT = 300  # matching lines per search
 PER_FILE = 5  # matching lines per file
-MAX_FILE_RG = 64 * 1024 * 1024  # ripgrep reads big logs quickly; matches the UI's jump-to-line reach
+MAX_FILE_RG = 64 * 1024 * 1024  # as far as the viewer's jump-to-line reaches
 MAX_FILE_PY = 5 * 1024 * 1024  # the Python fallback is slower, so it skips sooner
 BUDGET = 12.0  # seconds before a search stops and returns what it has
 SNIPPET = 220  # characters of context per line
-SKIP_EXTS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".avif", ".tif", ".tiff",
-    ".mp4", ".webm", ".mov", ".m4v", ".mkv", ".avi", ".mp3", ".wav", ".flac", ".ogg",
-    ".zip", ".gz", ".tgz", ".xz", ".bz2", ".7z", ".tar", ".pdf", ".pt", ".pth", ".onnx",
-    ".bin", ".npy", ".npz", ".pkl", ".so", ".o", ".a", ".whl", ".pyc", ".parquet", ".h5",
-}
+# Skipped by the Python fallback without opening them. ripgrep detects binary files itself.
+SKIP_EXTS = IMAGE_EXTS | VIDEO_EXTS | {
+    ".ico", ".mp3", ".wav", ".flac", ".ogg",
+    ".zip", ".gz", ".tgz", ".xz", ".bz2", ".7z", ".tar",
+    ".pdf", ".docx", ".xlsx", ".pptx",
+    ".pt", ".pth", ".onnx", ".bin", ".npy", ".npz", ".pkl", ".parquet", ".h5",
+    ".so", ".o", ".a", ".whl", ".pyc",
+}  # fmt: skip
+
+
+def _matches(text: str, needle: str):
+    """(line number, line, spans) for the first PER_FILE lines containing needle."""
+    found = 0
+    for number, line in enumerate(text.split("\n"), 1):
+        lower = line.lower()
+        at = lower.find(needle)
+        if at < 0:
+            continue
+        spans = []
+        while at >= 0 and len(spans) < 10:
+            spans.append((at, at + len(needle)))
+            at = lower.find(needle, at + len(needle))
+        yield number, line, spans
+        found += 1
+        if found >= PER_FILE:
+            return
 
 
 def snippet(line: str, start: int, end: int):
@@ -33,11 +58,13 @@ def snippet(line: str, start: int, end: int):
     if len(line) <= SNIPPET:
         return line, 0
     left = max(0, min(start - SNIPPET // 3, len(line) - SNIPPET))
-    return line[left:left + SNIPPET], left
+    return line[left : left + SNIPPET], left
 
 
 class ContentSearch:
-    def __init__(self, root, index, skip_dirs):
+    """Case-insensitive search for a fixed string in every readable text file."""
+
+    def __init__(self, root, index, skip_dirs=SKIP_DIRS):
         self.root = root
         self.index = index
         self.skip_dirs = skip_dirs
@@ -70,7 +97,7 @@ class ContentSearch:
     def _allowed(self, rel: str) -> bool:
         try:
             self.root.resolve(rel)
-        except Exception:
+        except Blocked:
             return False
         return True
 
@@ -78,24 +105,40 @@ class ContentSearch:
         if not spans:
             return None
         text, shift = snippet(line, spans[0][0], spans[0][1])
-        marks = [[max(s - shift, 0), min(e - shift, len(text))] for s, e in spans if e - shift > 0 and s - shift < len(text)]
+        marks = [
+            [max(s - shift, 0), min(e - shift, len(text))]
+            for s, e in spans
+            if e - shift > 0 and s - shift < len(text)
+        ]
         return {"path": rel, "line": number, "text": text, "marks": marks}
 
     def _ripgrep(self, query: str):
         command = [
-            self.rg, "--json", "--fixed-strings", "--ignore-case", "--follow", "--no-ignore",
-            "--max-count", str(PER_FILE), "--max-filesize", str(MAX_FILE_RG),
-            "--max-columns", "2000", "--max-columns-preview",
+            self.rg,
+            "--json",
+            "--fixed-strings",
+            "--ignore-case",
+            "--follow",
+            "--no-ignore",
+            "--max-count",
+            str(PER_FILE),
+            "--max-filesize",
+            str(MAX_FILE_RG),
+            "--max-columns",
+            "2000",
+            "--max-columns-preview",
         ]
         if self.root.show_hidden:
             command.append("--hidden")
         for name in self.skip_dirs:
-            command += ["--glob", "!**/%s/**" % name]
+            command += ["--glob", f"!**/{name}/**"]
         command += ["--", query, "."]
         hits = []
         partial = False
         deadline = time.monotonic() + BUDGET
-        process = subprocess.Popen(command, cwd=self.root.real, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen(
+            command, cwd=self.root.real, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
         try:
             for raw in process.stdout:
                 if time.monotonic() > deadline:
@@ -117,8 +160,10 @@ class ContentSearch:
                     continue
                 encoded = line.encode("utf-8", "surrogateescape")
                 spans = [
-                    (len(encoded[: m["start"]].decode("utf-8", "replace")),
-                     len(encoded[: m["end"]].decode("utf-8", "replace")))
+                    (
+                        len(encoded[: m["start"]].decode("utf-8", "replace")),
+                        len(encoded[: m["end"]].decode("utf-8", "replace")),
+                    )
                     for m in data.get("submatches", [])
                 ]
                 hit = self._hit(rel, data.get("line_number"), line, spans)
@@ -148,27 +193,15 @@ class ContentSearch:
                     continue
                 with open(real, "rb") as handle:
                     data = handle.read()
-            except Exception:
+            except (Blocked, OSError):
                 continue
             if b"\0" in data[:8192]:
                 continue
             text = data.decode("utf-8", "replace")
             if needle not in text.lower():
                 continue
-            found = 0
-            for number, line in enumerate(text.split("\n"), 1):
-                lower = line.lower()
-                at = lower.find(needle)
-                if at < 0:
-                    continue
-                spans = []
-                while at >= 0 and len(spans) < 10:
-                    spans.append((at, at + len(needle)))
-                    at = lower.find(needle, at + len(needle))
+            for number, line, spans in _matches(text, needle):
                 hits.append(self._hit(rel, number, line, spans))
-                found += 1
-                if found >= PER_FILE or len(hits) >= LIMIT:
-                    break
-            if len(hits) >= LIMIT:
-                break
+                if len(hits) >= LIMIT:
+                    return hits, partial
         return hits, partial

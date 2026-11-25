@@ -3,6 +3,7 @@
 A user service starts at login (or at boot, with lingering enabled), restarts
 after a crash, and logs to the journal. It needs no root.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -13,14 +14,15 @@ import shutil
 import subprocess
 import sys
 
+from .storage import config_home
+
 
 def unit_dir() -> str:
-    base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
-    return os.path.join(base, "systemd", "user")
+    return os.path.join(config_home(), "systemd", "user")
 
 
 def unit_name(name: str) -> str:
-    return "shelf-%s.service" % name
+    return f"shelf-{name}.service"
 
 
 def launcher() -> list:
@@ -69,11 +71,11 @@ def render_unit(name: str, command: list) -> str:
     exec_start = " ".join(shlex.quote(part) for part in command).replace("%", "%%")
     return (
         "[Unit]\n"
-        "Description=shelf file server (%s)\n"
+        f"Description=shelf file server ({name})\n"
         "Documentation=https://github.com/ivanfarevalo/shelf\n"
         "\n"
         "[Service]\n"
-        "ExecStart=%s\n"
+        f"ExecStart={exec_start}\n"
         "Restart=on-failure\n"
         # Binding to a Tailscale address fails until tailscaled is up after boot;
         # retrying covers that without ordering on a system unit we cannot see.
@@ -81,7 +83,7 @@ def render_unit(name: str, command: list) -> str:
         "\n"
         "[Install]\n"
         "WantedBy=default.target\n"
-    ) % (name, exec_start)
+    )
 
 
 def systemctl(*args, check=True):
@@ -92,14 +94,16 @@ def linger_enabled() -> bool | None:
     try:
         out = subprocess.run(
             ["loginctl", "show-user", os.environ.get("USER", ""), "-p", "Linger"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         ).stdout
     except (OSError, subprocess.TimeoutExpired):
         return None
     return out.strip().endswith("yes")
 
 
-def main(argv: list) -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="shelf service",
         description="Run shelf as a systemd user service.",
@@ -108,58 +112,84 @@ def main(argv: list) -> None:
     sub = parser.add_subparsers(dest="action", required=True)
     install = sub.add_parser("install", help="create, enable and start a service")
     install.add_argument("--name", default="default", help="service name (default: default)")
-    install.add_argument("--print", action="store_true", help="print the unit file instead of installing it")
+    install.add_argument(
+        "--print", action="store_true", help="print the unit file instead of installing it"
+    )
     install.add_argument("serve", nargs=argparse.REMAINDER, help="shelf arguments, after --")
     for action in ("uninstall", "status", "logs", "restart"):
-        command = sub.add_parser(action, help="%s a service" % action)
+        command = sub.add_parser(action, help=f"{action} a service")
         command.add_argument("--name", default="default")
     sub.add_parser("list", help="list installed shelf services")
+    return parser
+
+
+def main(argv: list) -> None:
+    parser = build_parser()
     args = parser.parse_args(argv)
-
     if args.action == "list":
-        folder = unit_dir()
-        names = sorted(f for f in os.listdir(folder) if re.fullmatch(r"shelf-.+\.service", f)) if os.path.isdir(folder) else []
-        for unit in names:
-            state = subprocess.run(["systemctl", "--user", "is-active", unit], capture_output=True, text=True).stdout.strip()
-            print("%-30s %s" % (unit, state or "unknown"))
-        if not names:
-            print("No shelf services installed.")
-        return
-
+        return list_services()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.name):
         parser.error("--name may use letters, digits, '.', '_' and '-' only")
     unit = unit_name(args.name)
     path = os.path.join(unit_dir(), unit)
-
     if args.action == "install":
-        serve = args.serve[1:] if args.serve[:1] == ["--"] else args.serve
-        command = launcher() + serve_arguments(serve)
-        text = render_unit(args.name, command)
-        if args.print:
-            sys.stdout.write(text)
-            return
-        if not shutil.which("systemctl"):
-            sys.exit("shelf: systemctl not found. Use `shelf service install --print` and adapt the unit, or run shelf in tmux.")
-        os.makedirs(unit_dir(), exist_ok=True)
-        with open(path, "w") as out:
-            out.write(text)
-        systemctl("daemon-reload")
-        systemctl("enable", "--now", unit)
-        print("Installed %s\n  unit:   %s\n  status: shelf service status --name %s\n  logs:   shelf service logs --name %s" % (unit, path, args.name, args.name))
-        if linger_enabled() is False:
-            print("\nIt stops when you log out. To keep it running and start it at boot:\n  loginctl enable-linger $USER")
-        return
-
+        return install(args, unit, path)
     if not os.path.exists(path):
-        sys.exit("shelf: no service named %r (%s)" % (args.name, path))
+        sys.exit(f"shelf: no service named {args.name!r} ({path})")
     if args.action == "uninstall":
         systemctl("disable", "--now", unit, check=False)
         os.remove(path)
         systemctl("daemon-reload")
-        print("Removed %s" % unit)
+        print(f"Removed {unit}")
     elif args.action == "status":
         systemctl("status", "--no-pager", unit, check=False)
     elif args.action == "restart":
         systemctl("restart", unit)
     elif args.action == "logs":
         os.execvp("journalctl", ["journalctl", "--user", "-u", unit, "-f", "-n", "100"])
+    return None
+
+
+def list_services() -> None:
+    folder = unit_dir()
+    names = []
+    if os.path.isdir(folder):
+        names = sorted(
+            name for name in os.listdir(folder) if re.fullmatch(r"shelf-.+\.service", name)
+        )
+    for unit in names:
+        state = subprocess.run(
+            ["systemctl", "--user", "is-active", unit], capture_output=True, text=True
+        ).stdout.strip()
+        print(f"{unit:<30} {state or 'unknown'}")
+    if not names:
+        print("No shelf services installed.")
+
+
+def install(args, unit: str, path: str) -> None:
+    serve = args.serve[1:] if args.serve[:1] == ["--"] else args.serve
+    text = render_unit(args.name, launcher() + serve_arguments(serve))
+    if args.print:
+        sys.stdout.write(text)
+        return
+    if not shutil.which("systemctl"):
+        sys.exit(
+            "shelf: systemctl not found. Use `shelf service install --print` and adapt the unit, "
+            "or run shelf in tmux."
+        )
+    os.makedirs(unit_dir(), exist_ok=True)
+    with open(path, "w") as out:
+        out.write(text)
+    systemctl("daemon-reload")
+    systemctl("enable", "--now", unit)
+    print(
+        f"Installed {unit}\n"
+        f"  unit:   {path}\n"
+        f"  status: shelf service status --name {args.name}\n"
+        f"  logs:   shelf service logs --name {args.name}"
+    )
+    if linger_enabled() is False:
+        print(
+            "\nIt stops when you log out. To keep it running and start it at boot:\n"
+            "  loginctl enable-linger $USER"
+        )

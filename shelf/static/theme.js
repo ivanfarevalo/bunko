@@ -2,4 +2,6 @@
 try {
   const saved = JSON.parse(localStorage.getItem("shelf.theme"));
   if (saved) document.documentElement.dataset.theme = saved;
-} catch (e) { /* storage blocked: follow the system theme */ }
+} catch {
+  /* storage blocked: follow the system theme */
+}

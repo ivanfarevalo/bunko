@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build dist/shelf.pyz: one file that runs on any machine with python3."""
+
 import pathlib
 import zipapp
 
@@ -20,4 +21,4 @@ zipapp.create_archive(
     filter=keep,
     compressed=True,
 )
-print("%s (%d KB)" % (target, target.stat().st_size // 1024))
+print(f"{target} ({target.stat().st_size // 1024} KB)")

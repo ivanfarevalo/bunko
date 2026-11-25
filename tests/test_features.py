@@ -2,6 +2,7 @@
 
 Run with: python3 -m unittest discover -s tests
 """
+
 import http.client
 import json
 import os
@@ -19,13 +20,15 @@ from urllib.parse import quote
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from shelf import server as shelf  # noqa: E402
-from shelf import service  # noqa: E402
-from shelf.access import Access, TokenStore, decode_rfc2047  # noqa: E402
-from shelf.cli import parse_args  # noqa: E402
-from shelf.contents import ContentSearch  # noqa: E402
-from shelf.media import Prober, Thumbnails  # noqa: E402
-from shelf.places import PlaceError, Places  # noqa: E402
+from shelf import server as shelf
+from shelf import service
+from shelf.access import Access, TokenStore, decode_rfc2047
+from shelf.cli import parse_args
+from shelf.contents import ContentSearch
+from shelf.index import SKIP_DIRS, SearchIndex
+from shelf.media import Prober, Thumbnails
+from shelf.paths import Root
+from shelf.places import PlaceError, Places
 
 FFMPEG = shutil.which("ffmpeg")
 
@@ -38,12 +41,11 @@ class Running:
     """A shelf server on a free loopback port, for one test class."""
 
     def __init__(self, root, access=None, **parts):
-        self.root = shelf.Root(str(root), False)
-        self.index = shelf.SearchIndex(self.root)
-        attrs = {"root": self.root, "index": self.index, **parts}
+        self.root = Root(str(root), False)
+        self.index = SearchIndex(self.root)
         if access is not None:
-            attrs["access"] = access
-        handler = type("H", (shelf.Handler,), attrs)
+            parts["access"] = access
+        handler = shelf.make_handler(self.root, self.index, **parts)
         self.server = shelf.Server(("127.0.0.1", 0), handler)
         self.port = self.server.server_address[1]
         if access is not None:
@@ -90,8 +92,7 @@ class TokenAccess(unittest.TestCase):
         cls.tmp.cleanup()
 
     def cookie_for(self, token):
-        return "%s=%s" % (self.srv.server.RequestHandlerClass.access.cookie_name,
-                          self.srv.server.RequestHandlerClass.access.session_value(token))
+        return f"{self.srv.server.RequestHandlerClass.access.cookie_name}={self.srv.server.RequestHandlerClass.access.session_value(token)}"
 
     def test_token_file_is_private(self):
         mode = stat.S_IMODE(os.stat(self.store.path).st_mode)
@@ -99,7 +100,13 @@ class TokenAccess(unittest.TestCase):
         self.assertGreaterEqual(len(self.token), 30)
 
     def test_everything_is_locked_without_a_token(self):
-        for path in ("/", "/hello.txt", "/__shelf/api/list?path=", "/__shelf/static/app.js", "/sub%20dir/"):
+        for path in (
+            "/",
+            "/hello.txt",
+            "/__shelf/api/list?path=",
+            "/__shelf/static/js/app.js",
+            "/sub%20dir/",
+        ):
             response, body = self.srv.get(path)
             self.assertEqual(response.status, 401, path)
             self.assertNotIn(b"hello", body)
@@ -143,7 +150,7 @@ class TokenAccess(unittest.TestCase):
     def test_forged_cookie_fails(self):
         name = self.srv.server.RequestHandlerClass.access.cookie_name
         for value in (self.token, "0" * 64, ""):
-            response, _ = self.srv.get("/hello.txt", {"Cookie": "%s=%s" % (name, value)})
+            response, _ = self.srv.get("/hello.txt", {"Cookie": f"{name}={value}"})
             self.assertEqual(response.status, 401, value)
 
     def test_logout_clears_the_cookie(self):
@@ -192,20 +199,31 @@ class TailscaleAccess(unittest.TestCase):
             self.assertEqual((response.status, body), (200, b"hello"), login)
 
     def test_other_users_and_missing_identity_are_refused(self):
-        for headers in ({"Tailscale-User-Login": "someone@else.example"}, {}, {"Tailscale-User-Login": "me@example.com.evil"}):
+        for headers in (
+            {"Tailscale-User-Login": "someone@else.example"},
+            {},
+            {"Tailscale-User-Login": "me@example.com.evil"},
+        ):
             response, body = self.srv.get("/hello.txt", headers)
             self.assertEqual(response.status, 403, headers)
             self.assertNotIn(b"hello", body)
 
     def test_refusal_page_escapes_the_login(self):
-        response, body = self.srv.get("/", {**NAV, "Tailscale-User-Login": "<script>x</script>@e.example"})
+        response, body = self.srv.get(
+            "/", {**NAV, "Tailscale-User-Login": "<script>x</script>@e.example"}
+        )
         self.assertEqual(response.status, 403)
         self.assertNotIn(b"<script>x", body)
         self.assertIn(b"&lt;script&gt;", body)
 
     def test_config_reports_who_is_signed_in(self):
-        _, body = self.srv.get("/__shelf/api/config", {
-            "Tailscale-User-Login": "me@example.com", "Tailscale-User-Name": "=?utf-8?q?Ferris_B=C3=BCller?="})
+        _, body = self.srv.get(
+            "/__shelf/api/config",
+            {
+                "Tailscale-User-Login": "me@example.com",
+                "Tailscale-User-Name": "=?utf-8?q?Ferris_B=C3=BCller?=",
+            },
+        )
         self.assertEqual(json.loads(body)["access"], {"mode": "tailscale", "user": "Ferris Büller"})
 
     def test_rfc2047(self):
@@ -240,10 +258,46 @@ class Media(unittest.TestCase):
         root = base / "root"
         (root / ".hidden").mkdir(parents=True)
         # Noise defeats PNG compression, so this lands well above the as-is threshold.
-        ffmpeg("-f", "lavfi", "-i", "testsrc=s=1600x1200:d=1,noise=alls=80:allf=t", "-frames:v", "1", str(root / "big.png"))
-        ffmpeg("-f", "lavfi", "-i", "color=c=red:s=32x32:d=1", "-frames:v", "1", str(root / "small.png"))
-        ffmpeg("-f", "lavfi", "-i", "testsrc=s=320x240:r=25:d=3", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(root / "clip.mp4"))
-        ffmpeg("-f", "lavfi", "-i", "testsrc=s=320x240:r=25:d=0.2", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(root / "short.mp4"))
+        ffmpeg(
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=s=1600x1200:d=1,noise=alls=80:allf=t",
+            "-frames:v",
+            "1",
+            str(root / "big.png"),
+        )
+        ffmpeg(
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=32x32:d=1",
+            "-frames:v",
+            "1",
+            str(root / "small.png"),
+        )
+        ffmpeg(
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=s=320x240:r=25:d=3",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(root / "clip.mp4"),
+        )
+        ffmpeg(
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=s=320x240:r=25:d=0.2",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            str(root / "short.mp4"),
+        )
         (root / "corrupt.mp4").write_bytes(b"\0" * 2048)
         (root / "-i.png").write_bytes((root / "big.png").read_bytes())
         shutil.copy(root / "big.png", root / ".hidden" / "secret.png")
@@ -256,7 +310,7 @@ class Media(unittest.TestCase):
         cls.tmp.cleanup()
 
     def thumb(self, name):
-        return self.srv.get("/__shelf/api/thumb?path=%s&v=1" % quote(name))
+        return self.srv.get(f"/__shelf/api/thumb?path={quote(name)}&v=1")
 
     def test_big_image_gets_a_small_jpeg(self):
         response, body = self.thumb("big.png")
@@ -273,7 +327,9 @@ class Media(unittest.TestCase):
     def test_video_poster_and_very_short_video(self):
         for name in ("clip.mp4", "short.mp4"):
             response, body = self.thumb(name)
-            self.assertEqual((response.status, response.getheader("Content-Type")), (200, "image/jpeg"), name)
+            self.assertEqual(
+                (response.status, response.getheader("Content-Type")), (200, "image/jpeg"), name
+            )
             self.assertTrue(body.startswith(b"\xff\xd8"), name)
 
     def test_unreadable_video_fails_once_and_is_remembered(self):
@@ -297,7 +353,10 @@ class Media(unittest.TestCase):
     def test_probe(self):
         response, body = self.srv.get("/__shelf/api/probe?path=clip.mp4")
         facts = json.loads(body)
-        self.assertEqual((response.status, facts["fps"], facts["codec"], facts["width"]), (200, 25.0, "h264", 320))
+        self.assertEqual(
+            (response.status, facts["fps"], facts["codec"], facts["width"]),
+            (200, 25.0, "h264", 320),
+        )
         self.assertAlmostEqual(facts["duration"], 3.0, delta=0.1)
 
 
@@ -310,7 +369,9 @@ class Contents(unittest.TestCase):
         secret = base / ".private"
         for folder in (root / "notes", root / ".git", root / "node_modules", secret):
             folder.mkdir(parents=True)
-        (root / "notes" / "plan.md").write_text("# Plan\n\nThe squeeze_b input size matters.\nAnother SQUEEZE_B line.\n")
+        (root / "notes" / "plan.md").write_text(
+            "# Plan\n\nThe squeeze_b input size matters.\nAnother SQUEEZE_B line.\n"
+        )
         (root / "notes" / "long.txt").write_text("x" * 5000 + " squeeze_b " + "y" * 5000 + "\n")
         (root / "notes" / "bin.dat").write_bytes(b"\0squeeze_b\0")
         (root / ".git" / "config").write_text("squeeze_b in a dotfile\n")
@@ -319,7 +380,7 @@ class Contents(unittest.TestCase):
         (root / "leak").symlink_to(secret)
         cls.root = root
         cls.srv = Running(root)
-        cls.search = ContentSearch(cls.srv.root, cls.srv.index, shelf.SKIP_DIRS)
+        cls.search = ContentSearch(cls.srv.root, cls.srv.index, SKIP_DIRS)
 
     @classmethod
     def tearDownClass(cls):
@@ -363,7 +424,11 @@ class Contents(unittest.TestCase):
         self.assertEqual(self.search.search("s")["results"], [])
 
 
-WRITE = {"Content-Type": "application/json", "X-Shelf-Request": "1", "Sec-Fetch-Site": "same-origin"}
+WRITE = {
+    "Content-Type": "application/json",
+    "X-Shelf-Request": "1",
+    "Sec-Fetch-Site": "same-origin",
+}
 
 
 class PlacesStore(unittest.TestCase):
@@ -377,7 +442,7 @@ class PlacesStore(unittest.TestCase):
             (root / name).write_text("x")
         self.root = root
         self.state = base / "state"
-        self.places = Places(shelf.Root(str(root), False), str(self.state))
+        self.places = Places(Root(str(root), False), str(self.state))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -389,27 +454,38 @@ class PlacesStore(unittest.TestCase):
 
     def test_recent_keeps_fifty(self):
         for i in range(60):
-            (self.root / ("f%d.txt" % i)).write_text("x")
-            self.places.apply(None, {"op": "visit", "path": "f%d.txt" % i})
+            (self.root / f"f{i}.txt").write_text("x")
+            self.places.apply(None, {"op": "visit", "path": f"f{i}.txt"})
         self.assertEqual(len(self.places.view(None)["recent"]), 50)
 
     def test_favorites_and_tags(self):
         self.places.apply(None, {"op": "favorite", "path": "notes", "on": True})
         self.places.apply(None, {"op": "tag", "path": "a.md", "tag": "review"})
-        view = self.places.apply(None, {"op": "tag", "path": "notes/c.md", "tag": "Review"})  # same tag, any case
+        view = self.places.apply(
+            None, {"op": "tag", "path": "notes/c.md", "tag": "Review"}
+        )  # same tag, any case
         self.assertEqual(view["favorites"], [{"path": "notes", "dir": True, "missing": False}])
         self.assertEqual([t["name"] for t in view["tags"]], ["review"])
         self.assertEqual([f["path"] for f in view["tags"][0]["files"]], ["a.md", "notes/c.md"])
         self.assertEqual(view["tagged"]["a.md"], ["review"])
 
     def test_favorite_nicknames(self):
-        view = self.places.apply(None, {"op": "favorite", "path": "notes/c.md", "on": True, "name": "  Team   notes "})
-        self.assertEqual(view["favorites"][0], {"path": "notes/c.md", "dir": False, "missing": False, "name": "Team notes"})
-        view = self.places.apply(None, {"op": "rename-favorite", "path": "notes/c.md", "name": "Plan"})
+        view = self.places.apply(
+            None, {"op": "favorite", "path": "notes/c.md", "on": True, "name": "  Team   notes "}
+        )
+        self.assertEqual(
+            view["favorites"][0],
+            {"path": "notes/c.md", "dir": False, "missing": False, "name": "Team notes"},
+        )
+        view = self.places.apply(
+            None, {"op": "rename-favorite", "path": "notes/c.md", "name": "Plan"}
+        )
         self.assertEqual(view["favorites"][0]["name"], "Plan")
         for clearing in ("", "c.md"):  # empty, or the file name itself, means no nickname
             self.places.apply(None, {"op": "rename-favorite", "path": "notes/c.md", "name": "x"})
-            view = self.places.apply(None, {"op": "rename-favorite", "path": "notes/c.md", "name": clearing})
+            view = self.places.apply(
+                None, {"op": "rename-favorite", "path": "notes/c.md", "name": clearing}
+            )
             self.assertNotIn("name", view["favorites"][0], clearing)
 
     def test_nickname_rules(self):
@@ -418,7 +494,9 @@ class PlacesStore(unittest.TestCase):
             with self.assertRaises(PlaceError):
                 self.places.apply(None, {"op": "rename-favorite", "path": "a.md", "name": bad})
         with self.assertRaises(PlaceError):
-            self.places.apply(None, {"op": "rename-favorite", "path": "b.md", "name": "not a favorite"})
+            self.places.apply(
+                None, {"op": "rename-favorite", "path": "b.md", "name": "not a favorite"}
+            )
 
     def test_unfavoriting_drops_the_nickname(self):
         self.places.apply(None, {"op": "favorite", "path": "a.md", "name": "Alpha"})
@@ -437,7 +515,10 @@ class PlacesStore(unittest.TestCase):
         view = self.places.apply(None, {"op": "rename-tag", "tag": "one", "name": "first"})
         self.assertEqual(sorted(t["name"] for t in view["tags"]), ["first", "two"])
         view = self.places.apply(None, {"op": "rename-tag", "tag": "first", "name": "TWO"})
-        self.assertEqual([(t["name"], [f["path"] for f in t["files"]]) for t in view["tags"]], [("two", ["b.md", "a.md"])])
+        self.assertEqual(
+            [(t["name"], [f["path"] for f in t["files"]]) for t in view["tags"]],
+            [("two", ["b.md", "a.md"])],
+        )
 
     def test_hidden_missing_and_escaping_paths_are_refused(self):
         for path in (".private/key", "../x", "nope.md", "", "/"):
@@ -463,7 +544,7 @@ class PlacesStore(unittest.TestCase):
         files = list(self.state.glob("*.json"))
         self.assertEqual(len(files), 1)
         self.assertEqual(stat.S_IMODE(os.stat(files[0]).st_mode), 0o600)
-        again = Places(shelf.Root(str(self.root), False), str(self.state))
+        again = Places(Root(str(self.root), False), str(self.state))
         self.assertEqual(again.view(None)["favorites"][0]["path"], "a.md")
         self.assertFalse(any(self.root.rglob("*.json")))  # nothing written into the served folder
 
@@ -476,7 +557,11 @@ class PlacesStore(unittest.TestCase):
         self.assertEqual(view["favorites"], [{"path": "b.md", "dir": False, "missing": True}])
 
     def test_paths_that_become_hidden_are_not_shown(self):
-        self.places.data["users"]["default"] = {"recent": [], "favorites": [".private/key"], "tags": {"t": [".private/key"]}}
+        self.places.data["users"]["default"] = {
+            "recent": [],
+            "favorites": [".private/key"],
+            "tags": {"t": [".private/key"]},
+        }
         view = self.places.view(None)
         self.assertEqual((view["favorites"], view["tags"][0]["files"]), ([], []))
 
@@ -489,10 +574,14 @@ class PlacesHttp(unittest.TestCase):
         root = base / "root"
         root.mkdir()
         (root / "a.md").write_text("x")
-        cls.srv = Running(root, places=Places(shelf.Root(str(root), False), str(base / "state")))
+        cls.srv = Running(root, places=Places(Root(str(root), False), str(base / "state")))
         tokens = TokenStore(str(base / "token"))
         cls.token = tokens.ensure()
-        cls.locked = Running(root, Access("token", 0, tokens), places=Places(shelf.Root(str(root), False), str(base / "state2")))
+        cls.locked = Running(
+            root,
+            Access("token", 0, tokens),
+            places=Places(Root(str(root), False), str(base / "state2")),
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -512,15 +601,26 @@ class PlacesHttp(unittest.TestCase):
     def test_write_then_read(self):
         status, body = self.post(self.srv, {"op": "favorite", "path": "a.md"})
         self.assertEqual(status, 200)
-        response, body = self.srv.get("/__shelf/api/places")
+        _response, body = self.srv.get("/__shelf/api/places")
         self.assertEqual(json.loads(body)["favorites"][0]["path"], "a.md")
 
     def test_cross_site_writes_are_refused(self):
         attempts = [
-            {"Content-Type": "application/json", "Sec-Fetch-Site": "same-origin"},  # no custom header
+            {
+                "Content-Type": "application/json",
+                "Sec-Fetch-Site": "same-origin",
+            },  # no custom header
             {"Content-Type": "text/plain", "X-Shelf-Request": "1"},  # a simple form-like request
-            {"Content-Type": "application/json", "X-Shelf-Request": "1", "Sec-Fetch-Site": "cross-site"},
-            {"Content-Type": "application/json", "X-Shelf-Request": "1", "Sec-Fetch-Site": "same-site"},
+            {
+                "Content-Type": "application/json",
+                "X-Shelf-Request": "1",
+                "Sec-Fetch-Site": "cross-site",
+            },
+            {
+                "Content-Type": "application/json",
+                "X-Shelf-Request": "1",
+                "Sec-Fetch-Site": "same-site",
+            },
         ]
         for headers in attempts:
             status, _ = self.post(self.srv, {"op": "clear-recent"}, headers)
@@ -545,22 +645,42 @@ class PlacesHttp(unittest.TestCase):
     def test_writes_need_access_too(self):
         status, _ = self.post(self.locked, {"op": "favorite", "path": "a.md"})
         self.assertEqual(status, 401)
-        status, _ = self.post(self.locked, {"op": "favorite", "path": "a.md"}, {**WRITE, "Authorization": "Bearer " + self.token})
+        status, _ = self.post(
+            self.locked,
+            {"op": "favorite", "path": "a.md"},
+            {**WRITE, "Authorization": "Bearer " + self.token},
+        )
         self.assertEqual(status, 200)
 
 
 class ServiceUnit(unittest.TestCase):
     def test_arguments_are_validated_and_made_absolute(self):
         with mock.patch("os.getcwd", return_value="/srv/docs"):
-            args = service.serve_arguments(["8100", ".", "-b", "127.0.0.1", "--allow-user", "me@example.com"])
-        self.assertEqual(args, ["--port", "8100", "--directory", "/srv/docs", "--bind", "127.0.0.1", "--allow-user", "me@example.com"])
+            args = service.serve_arguments(
+                ["8100", ".", "-b", "127.0.0.1", "--allow-user", "me@example.com"]
+            )
+        self.assertEqual(
+            args,
+            [
+                "--port",
+                "8100",
+                "--directory",
+                "/srv/docs",
+                "--bind",
+                "127.0.0.1",
+                "--allow-user",
+                "me@example.com",
+            ],
+        )
 
     def test_bad_arguments_are_refused(self):
         with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
             service.serve_arguments(["--allow-user", "me@example.com"])  # not loopback
 
     def test_unit_quotes_and_escapes_percent(self):
-        text = service.render_unit("docs", ["/usr/bin/python3", "-m", "shelf", "--directory", "/data/100% done"])
+        text = service.render_unit(
+            "docs", ["/usr/bin/python3", "-m", "shelf", "--directory", "/data/100% done"]
+        )
         self.assertIn("ExecStart=/usr/bin/python3 -m shelf --directory '/data/100%% done'", text)
         self.assertIn("Restart=on-failure", text)
         self.assertIn("WantedBy=default.target", text)
@@ -568,7 +688,9 @@ class ServiceUnit(unittest.TestCase):
     def test_launcher_ignores_the_working_directory(self):
         with mock.patch.object(sys, "argv", ["/usr/local/bin/shelf"]):
             self.assertEqual(service.launcher()[1:], ["-I", "-u", "-m", "shelf"])
-        with tempfile.NamedTemporaryFile(suffix=".pyz") as pyz, mock.patch.object(sys, "argv", [pyz.name]):
+        with tempfile.NamedTemporaryFile(suffix=".pyz") as pyz, mock.patch.object(
+            sys, "argv", [pyz.name]
+        ):
             self.assertEqual(service.launcher()[1:], ["-I", "-u", pyz.name])
 
     def test_isolated_launch_ignores_a_shelf_folder_in_the_working_directory(self):
@@ -580,14 +702,22 @@ class ServiceUnit(unittest.TestCase):
                 out.write("print('DECOY')\n")
             with open(os.path.join(cwd, "shelf", "__main__.py"), "w") as out:
                 out.write("")
-            plain = subprocess.run([sys.executable, "-m", "shelf"], cwd=cwd, capture_output=True, text=True)
+            plain = subprocess.run(
+                [sys.executable, "-m", "shelf"], cwd=cwd, capture_output=True, text=True
+            )
             self.assertIn("DECOY", plain.stdout)
-            isolated = subprocess.run([sys.executable, "-I", "-u", "-m", "shelf", "--version"], cwd=cwd, capture_output=True, text=True)
+            isolated = subprocess.run(
+                [sys.executable, "-I", "-u", "-m", "shelf", "--version"],
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+            )
             self.assertNotIn("DECOY", isolated.stdout)
 
     def test_install_print_does_not_touch_systemd(self):
-        with tempfile.TemporaryDirectory() as home, mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": home}), \
-                mock.patch("subprocess.run") as run, mock.patch("sys.stdout") as out:
+        with tempfile.TemporaryDirectory() as home, mock.patch.dict(
+            os.environ, {"XDG_CONFIG_HOME": home}
+        ), mock.patch("subprocess.run") as run, mock.patch("sys.stdout") as out:
             service.main(["install", "--name", "docs", "--print", "--", "8100", "/tmp"])
         run.assert_not_called()
         written = "".join(call.args[0] for call in out.write.call_args_list)

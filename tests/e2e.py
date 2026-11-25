@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Drive the UI in real Chrome against a demo tree.
 
-    python3 tests/make_demo.py DEMO
-    uv run --no-project --with playwright python tests/e2e.py DEMO SHOTS_DIR
+python3 tests/make_demo.py DEMO
+uv run --no-project --with playwright python tests/e2e.py DEMO SHOTS_DIR
 """
+
 import atexit
 import os
 import pathlib
@@ -30,10 +31,16 @@ base = f"http://127.0.0.1:{port}"
 # Keep favorites, recents and thumbnails out of the real ~/.config and ~/.cache.
 scratch = tempfile.mkdtemp(prefix="shelf-e2e-")
 atexit.register(shutil.rmtree, scratch, True)
-ENV = dict(os.environ, XDG_CONFIG_HOME=os.path.join(scratch, "config"), XDG_CACHE_HOME=os.path.join(scratch, "cache"))
+ENV = dict(
+    os.environ,
+    XDG_CONFIG_HOME=os.path.join(scratch, "config"),
+    XDG_CACHE_HOME=os.path.join(scratch, "cache"),
+)
 server = subprocess.Popen(
     [sys.executable, "-m", "shelf", str(port), str(demo), "-b", "127.0.0.1"],
-    cwd=repo, stdout=subprocess.DEVNULL, env=ENV,
+    cwd=repo,
+    stdout=subprocess.DEVNULL,
+    env=ENV,
 )
 atexit.register(server.terminate)
 for _ in range(100):
@@ -65,7 +72,11 @@ with sync_playwright() as p:
     # Google Chrome, not bundled Chromium: Chromium can't play H.264 video.
     # Set SHELF_E2E_CHROME to use a specific binary.
     binary = os.environ.get("SHELF_E2E_CHROME")
-    browser = p.chromium.launch(executable_path=binary, headless=True) if binary else p.chromium.launch(channel="chrome", headless=True)
+    browser = (
+        p.chromium.launch(executable_path=binary, headless=True)
+        if binary
+        else p.chromium.launch(channel="chrome", headless=True)
+    )
     context = browser.new_context(viewport={"width": 1360, "height": 860}, color_scheme="light")
     context.set_default_timeout(10000)
     page = context.new_page()
@@ -93,7 +104,10 @@ with sync_playwright() as p:
     names = page.locator("#tree > .row .label").all_text_contents()
     check("tree lists folders first", names[:3] == ["data", "docs", "images"], names[:4])
     check("dotfolders absent from tree", ".hidden" not in names)
-    check("README renders under the listing", page.locator(".readme h1").inner_text() == "Detector evaluation")
+    check(
+        "README renders under the listing",
+        page.locator(".readme h1").inner_text() == "Detector evaluation",
+    )
     check("markdown table renders", page.locator(".readme table tr").count() == 3)
     snap(page, "01-folder")
 
@@ -108,7 +122,10 @@ with sync_playwright() as p:
     page.locator(".md img[alt='A chart']").scroll_into_view_if_needed()
     wait_js("document.querySelector('.md img[alt=\"A chart\"]').naturalWidth > 0")
     check("relative image loads", True)
-    check("relative doc link rewritten", page.locator(".md a", has_text="relative link").get_attribute("href") == "#/README.md")
+    check(
+        "relative doc link rewritten",
+        page.locator(".md a", has_text="relative link").get_attribute("href") == "#/README.md",
+    )
     external = page.locator(".md a", has_text="external link")
     check("external link opens a new tab", external.get_attribute("target") == "_blank")
     check("script tags removed", page.evaluate("window.__pwned") is None)
@@ -116,7 +133,11 @@ with sync_playwright() as p:
     check("javascript: links removed", not (href or "").startswith("javascript"), href)
     page.locator(".md a", has_text="heading link").click()
     page.wait_for_timeout(150)
-    check("in-page anchor scrolls without changing route", page.url.endswith("docs/guide.md") and page.evaluate("document.querySelector('#view').scrollTop") > 0)
+    check(
+        "in-page anchor scrolls without changing route",
+        page.url.endswith("docs/guide.md")
+        and page.evaluate("document.querySelector('#view').scrollTop") > 0,
+    )
     page.evaluate("document.querySelector('#view').scrollTop = 0")
     snap(page, "02-markdown")
     page.locator(".md a", has_text="relative link").click()
@@ -128,7 +149,10 @@ with sync_playwright() as p:
     frame = page.frame_locator("iframe.page-frame")
     frame.locator("#title").wait_for()
     page.wait_for_timeout(300)
-    check("relative fetch works in the frame", frame.locator("#title").inner_text() == "Fetched from relative JSON")
+    check(
+        "relative fetch works in the frame",
+        frame.locator("#title").inner_text() == "Fetched from relative JSON",
+    )
     color = frame.locator("#title").evaluate("e => getComputedStyle(e).color")
     check("relative CSS applies", color == "rgb(200, 30, 30)", color)
     check("root-absolute image loads", frame.locator("#abs").evaluate("e => e.naturalWidth") > 0)
@@ -151,7 +175,11 @@ with sync_playwright() as p:
     frame.locator("#folder").wait_for()
     frame.locator("#folder").click()
     page.wait_for_selector(".folder-head h1")
-    check("folder link inside a page opens the folder view", page.locator(".folder-head h1").inner_text() == "data", page.url)
+    check(
+        "folder link inside a page opens the folder view",
+        page.locator(".folder-head h1").inner_text() == "data",
+        page.url,
+    )
     go("site")
     page.wait_for_selector("iframe.page-frame")
     page.frame_locator("iframe.page-frame").locator("#siteindex").wait_for()
@@ -160,13 +188,21 @@ with sync_playwright() as p:
     print("image")
     go("images")
     page.wait_for_selector(".grid .card")
-    check("image folder opens as gallery", page.locator(".grid .card").count() == 8, page.locator(".grid .card").count())
+    check(
+        "image folder opens as gallery",
+        page.locator(".grid .card").count() == 8,
+        page.locator(".grid .card").count(),
+    )
     page.wait_for_timeout(300)
     snap(page, "04-gallery")
     go("images/frame_2.png")
     wait_js("document.querySelector('.stage img')?.naturalWidth > 0")
     page.wait_for_timeout(200)
-    check("dimensions shown", "640 × 480" in page.locator("#meta").inner_text(), page.locator("#meta").inner_text())
+    check(
+        "dimensions shown",
+        "640 × 480" in page.locator("#meta").inner_text(),
+        page.locator("#meta").inner_text(),
+    )
     page.keyboard.press("ArrowRight")
     page.wait_for_timeout(350)
     check("right arrow goes to next image", page.url.endswith("frame_3.png"), page.url)
@@ -181,15 +217,23 @@ with sync_playwright() as p:
     check("svg renders", True)
     go("images/broken.png")
     page.wait_for_selector(".notice")
-    check("broken image explains itself", "could not be decoded" in page.locator(".notice").inner_text())
+    check(
+        "broken image explains itself",
+        "could not be decoded" in page.locator(".notice").inner_text(),
+    )
 
     print("video")
     go("videos/clip.mp4")
     page.wait_for_selector("video")
     wait_js("document.querySelector('video').readyState >= 1")
-    check("video metadata loads", abs(page.evaluate("document.querySelector('video').duration") - 20) < 0.5)
+    check(
+        "video metadata loads",
+        abs(page.evaluate("document.querySelector('video').duration") - 20) < 0.5,
+    )
     page.evaluate("document.querySelector('video').currentTime = 15")
-    wait_js("document.querySelector('video').readyState >= 2 && Math.abs(document.querySelector('video').currentTime - 15) < 0.5")
+    wait_js(
+        "document.querySelector('video').readyState >= 2 && Math.abs(document.querySelector('video').currentTime - 15) < 0.5"
+    )
     check("seeking works", True)
     page.wait_for_timeout(200)
     snap(page, "06-video")
@@ -223,9 +267,18 @@ with sync_playwright() as p:
     go("data/quoted.csv")
     page.wait_for_selector("table.data tbody tr:not(.pad) td")
     texts = page.locator("table.data tbody tr:not(.pad) td:nth-child(3)").all_inner_texts()
-    check("quotes, commas, newlines in fields", texts[:3] == ["a, comma", 'say "hi"', "two\nlines"] or texts[:3] == ["a, comma", 'say "hi"', "two lines"], texts)
+    check(
+        "quotes, commas, newlines in fields",
+        texts[:3] == ["a, comma", 'say "hi"', "two\nlines"]
+        or texts[:3] == ["a, comma", 'say "hi"', "two lines"],
+        texts,
+    )
     check("ragged rows survive", page.locator("table.data tbody tr:not(.pad)").count() == 5)
-    check("extra columns get headers", page.locator("table.data thead th").count() == 5, page.locator("table.data thead th").count())
+    check(
+        "extra columns get headers",
+        page.locator("table.data thead th").count() == 5,
+        page.locator("table.data thead th").count(),
+    )
     go("data/semi.csv")
     page.wait_for_selector("table.data tbody tr:not(.pad) td")
     check("semicolon sniffed", page.locator("table.data thead th").count() == 4)
@@ -241,7 +294,10 @@ with sync_playwright() as p:
     go("data/%3Cb%3Eevil.csv")
     page.wait_for_selector("table.data")
     page.wait_for_timeout(200)
-    check("html in csv stays text", page.evaluate("window.__pwned") is None and page.locator("table.data img").count() == 0)
+    check(
+        "html in csv stays text",
+        page.evaluate("window.__pwned") is None and page.locator("table.data img").count() == 0,
+    )
 
     go("data/big.csv")
     page.wait_for_selector("table.data tbody tr:not(.pad) td")
@@ -264,14 +320,20 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     last = page.locator("table.data tbody tr:not(.pad) td.rn").last.inner_text()
     check("final row number", last == "400000", last)
-    sticky = page.evaluate("document.querySelector('table.data thead th:nth-child(2)').getBoundingClientRect().top - document.querySelector('.table-scroll').getBoundingClientRect().top")
+    sticky = page.evaluate(
+        "document.querySelector('table.data thead th:nth-child(2)').getBoundingClientRect().top - document.querySelector('.table-scroll').getBoundingClientRect().top"
+    )
     check("header stays pinned", abs(sticky) < 2, sticky)
 
     print("text and code")
     go("src/train.py")
     page.wait_for_selector(".code-view")
     check("python highlighted", page.locator(".code-view .hljs-keyword").count() > 0)
-    check("line numbers", page.locator(".gutter").inner_text().split()[-1] == "8", page.locator(".gutter").inner_text())
+    check(
+        "line numbers",
+        page.locator(".gutter").inner_text().split()[-1] == "8",
+        page.locator(".gutter").inner_text(),
+    )
     snap(page, "08-code")
     go("src/CMakeLists.txt")
     page.wait_for_selector(".code-view .hljs-keyword, .code-view .hljs-built_in")
@@ -293,7 +355,11 @@ with sync_playwright() as p:
     check("binary gets a download card", "no preview" in page.locator(".notice").inner_text())
     go("logs/big.log")
     page.wait_for_selector(".load-more .btn")
-    check("big text loads in part", "Showing 1.0 MB" in page.locator(".load-more").inner_text(), page.locator(".load-more").inner_text())
+    check(
+        "big text loads in part",
+        "Showing 1.0 MB" in page.locator(".load-more").inner_text(),
+        page.locator(".load-more").inner_text(),
+    )
     lines_before = len(page.locator(".gutter").inner_text().split())
     page.locator(".load-more .btn").click()
     page.wait_for_timeout(300)
@@ -319,7 +385,11 @@ with sync_playwright() as p:
     go("many")
     page.wait_for_selector(".item")
     page.wait_for_timeout(200)
-    check("folder draws in batches", page.locator(".item").count() <= 400, page.locator(".item").count())
+    check(
+        "folder draws in batches",
+        page.locator(".item").count() <= 400,
+        page.locator(".item").count(),
+    )
     page.evaluate("document.querySelector('#view').scrollTop = 1e9")
     page.wait_for_timeout(250)
     check("scrolling draws more", page.locator(".item").count() > 200)
@@ -373,11 +443,16 @@ with sync_playwright() as p:
     (demo / "newfile.txt").write_text("hi")
     page.wait_for_selector("#tree .row[data-path='newfile.txt']", timeout=6000)
     # The tree refreshes first, then the folder view re-renders.
-    wait_js("[...document.querySelectorAll('.item')].some(item => item.textContent.includes('newfile.txt'))", timeout=3000)
-    check("new file appears in tree and folder", page.locator(".item", has_text="newfile.txt").count() == 1)
+    wait_js(
+        "[...document.querySelectorAll('.item')].some(item => item.textContent.includes('newfile.txt'))",
+        timeout=3000,
+    )
+    check(
+        "new file appears in tree and folder",
+        page.locator(".item", has_text="newfile.txt").count() == 1,
+    )
     for leftover in (live, live_html, demo / "newfile.txt"):
         leftover.unlink()
-
 
     print("content search")
     page.locator(".search-modes button[data-mode=contents]").click()
@@ -385,20 +460,31 @@ with sync_playwright() as p:
     wait_js("document.querySelector('#results .snip') !== null")
     snippet = page.locator("#results .snip").first
     check("content hit shows the line", "duplicate heading" in snippet.inner_text().lower())
-    check("match is marked in the snippet", page.locator("#results .snip mark").first.inner_text().lower() == "duplicate heading")
+    check(
+        "match is marked in the snippet",
+        page.locator("#results .snip mark").first.inner_text().lower() == "duplicate heading",
+    )
     snap(page, "14-content-search")
     snippet.click()
     page.wait_for_selector("mark.find.current")
-    check("markdown opens at the match", "?line=" in page.url and page.locator("mark.find").count() >= 1)
+    check(
+        "markdown opens at the match",
+        "?line=" in page.url and page.locator("mark.find").count() >= 1,
+    )
     page.locator("#q").fill("step=777 loss")
     wait_js("document.querySelector('#results .snip')?.textContent.includes('step=777 loss')")
     page.locator("#results .snip").first.click()
     page.wait_for_selector(".line-mark")
-    check("text file opens at the line", page.evaluate("document.querySelector('#view').scrollTop") > 1000)
+    check(
+        "text file opens at the line",
+        page.evaluate("document.querySelector('#view').scrollTop") > 1000,
+    )
     page.locator("#q").fill("step=100000 loss")
     wait_js("document.querySelector('#results .snip')?.textContent.includes('step=100000 loss')")
     page.locator("#results .snip").first.click()
-    wait_js("document.querySelector('.gutter')?.textContent.split('\\n').length > 100001", timeout=20000)
+    wait_js(
+        "document.querySelector('.gutter')?.textContent.split('\\n').length > 100001", timeout=20000
+    )
     page.wait_for_selector(".line-mark")
     lines = page.evaluate("document.querySelector('.gutter').textContent.split('\\n').length")
     check("jump loads past the first megabyte", lines > 100001, lines)
@@ -409,23 +495,53 @@ with sync_playwright() as p:
     go("office/review.docx")
     page.wait_for_selector(".docx h1")
     check("word title", page.locator(".docx h1").first.inner_text() == "Quarterly review")
-    check("word emphasis and code", page.locator(".docx strong", has_text="0.912").count() == 1
-          and page.locator(".docx p > code", has_text="eval.py").count() == 1)
-    check("word lists nest", page.locator(".docx ul ul li").count() == 1 and page.locator(".docx ol ol[type=a] li").count() == 1)
+    check(
+        "word emphasis and code",
+        page.locator(".docx strong", has_text="0.912").count() == 1
+        and page.locator(".docx p > code", has_text="eval.py").count() == 1,
+    )
+    check(
+        "word lists nest",
+        page.locator(".docx ul ul li").count() == 1
+        and page.locator(".docx ol ol[type=a] li").count() == 1,
+    )
     check("word table", page.locator(".docx .tbl table tr").count() == 4)
     code = page.locator(".docx .block pre").inner_text()
-    check("word code block, with a copy button", code == "python eval.py \\\n    --split indoor --threshold 0.45"
-          and page.locator(".docx .block .copy").count() == 1, code)
-    wait_js("(() => { const i = document.querySelector('.docx img'); return i && i.complete && i.naturalWidth === 4 * 50 })()")
+    check(
+        "word code block, with a copy button",
+        code == "python eval.py \\\n    --split indoor --threshold 0.45"
+        and page.locator(".docx .block .copy").count() == 1,
+        code,
+    )
+    wait_js(
+        "(() => { const i = document.querySelector('.docx img'); return i && i.complete && i.naturalWidth === 4 * 50 })()"
+    )
     check("embedded image loads", True)
-    check("outline beside the document", page.locator(".toc .toc-link").count() >= 4, page.locator(".toc .toc-link").count())
-    check("word link opens a new tab", page.locator(".docx a", has_text="project page").get_attribute("target") == "_blank")
-    check("script text stays text", page.evaluate("window.__pwned") is None and "<script>" in page.locator(".docx").inner_text())
-    check("footnote listed", "Measured on 4,210 clips." in page.locator(".docx .notes").inner_text())
+    check(
+        "outline beside the document",
+        page.locator(".toc .toc-link").count() >= 4,
+        page.locator(".toc .toc-link").count(),
+    )
+    check(
+        "word link opens a new tab",
+        page.locator(".docx a", has_text="project page").get_attribute("target") == "_blank",
+    )
+    check(
+        "script text stays text",
+        page.evaluate("window.__pwned") is None
+        and "<script>" in page.locator(".docx").inner_text(),
+    )
+    check(
+        "footnote listed", "Measured on 4,210 clips." in page.locator(".docx .notes").inner_text()
+    )
     page.locator(".docx a", has_text="summary").click()
     page.wait_for_timeout(200)
-    check("internal link scrolls, route unchanged", page.url.endswith("#/office/review.docx")
-          and page.evaluate("document.querySelector('#view').scrollTop") > 0, page.url)
+    check(
+        "internal link scrolls, route unchanged",
+        page.url.endswith("#/office/review.docx")
+        and page.evaluate("document.querySelector('#view').scrollTop") > 0,
+        page.url,
+    )
     snap(page, "24-word")
 
     go("office/results.xlsx")
@@ -438,7 +554,11 @@ with sync_playwright() as p:
     check("excel row numbers match Excel", first[0] == "2", first)
     check("dates and percents", first[5:7] == ["2023-10-02", "10%"], first)
     tabs = page.locator(".sheet-tab")
-    check("sheet tabs leave out hidden sheets", tabs.all_inner_texts() == ["Results", "Budget"], tabs.all_inner_texts())
+    check(
+        "sheet tabs leave out hidden sheets",
+        tabs.all_inner_texts() == ["Results", "Budget"],
+        tabs.all_inner_texts(),
+    )
     check("hidden sheets counted", page.locator(".sheet-note").inner_text() == "1 hidden")
     snap(page, "25-excel")
     tabs.nth(1).click()
@@ -446,22 +566,35 @@ with sync_playwright() as p:
     check("tab switches the sheet", page.url.endswith("office/results.xlsx?sheet=1"), page.url)
     first = page.locator("table.data tbody tr:not(.pad)").first.locator("td").all_inner_texts()
     check("offset sheet keeps Excel's row numbers", first[:2] == ["3", "GPUs"], first)
-    check("column letter in the header tooltip", page.locator("table.data thead th").nth(1).get_attribute("title") == "B · Item")
+    check(
+        "column letter in the header tooltip",
+        page.locator("table.data thead th").nth(1).get_attribute("title") == "B · Item",
+    )
     check("sheet tab marked", page.locator(".sheet-tab.on").inner_text() == "Budget")
     page.reload()
     page.wait_for_selector("table.data td >> text=GPUs")
     check("sheet survives a reload", page.locator(".sheet-tab.on").inner_text() == "Budget")
     go("office/old.doc")
-    check("old Word files explain themselves", "Saved as .docx" in page.locator(".notice").inner_text())
+    check(
+        "old Word files explain themselves",
+        "Saved as .docx" in page.locator(".notice").inner_text(),
+    )
     go("office/broken.xlsx")
-    check("damaged workbook explains itself", "valid Office file" in page.locator(".notice").inner_text(),
-          page.locator(".notice").inner_text())
+    check(
+        "damaged workbook explains itself",
+        "valid Office file" in page.locator(".notice").inner_text(),
+        page.locator(".notice").inner_text(),
+    )
 
     print("jsonl")
     go("data/events.jsonl")
     page.wait_for_selector("table.data tbody tr:not(.pad) td")
     heads = page.locator("table.data thead th").all_inner_texts()
-    check("jsonl columns from keys", [h.strip() for h in heads[1:5]] == ["id", "label", "score", "box"], heads)
+    check(
+        "jsonl columns from keys",
+        [h.strip() for h in heads[1:5]] == ["id", "label", "score", "box"],
+        heads,
+    )
     check("late keys add columns", any("late_key" in h for h in heads), heads)
     check("bad lines kept", any("unparsed" in h for h in heads), heads)
     status = page.locator(".table-bar .status").inner_text()
@@ -480,7 +613,12 @@ with sync_playwright() as p:
     go("videos/clip.mp4")
     page.wait_for_selector(".vtools")
     wait_js("document.querySelector('.vt-frame').textContent.includes('fps')")
-    check("frame rate from ffprobe", "25 fps" in page.locator(".vt-frame").inner_text() and "≈" not in page.locator(".vt-frame").inner_text(), page.locator(".vt-frame").inner_text())
+    check(
+        "frame rate from ffprobe",
+        "25 fps" in page.locator(".vt-frame").inner_text()
+        and "≈" not in page.locator(".vt-frame").inner_text(),
+        page.locator(".vt-frame").inner_text(),
+    )
     page.locator("body").click(position={"x": 5, "y": 300})
     page.keyboard.press(".")
     wait_js("document.querySelector('.vt-frame').textContent.startsWith('frame 1 ')")
@@ -498,7 +636,10 @@ with sync_playwright() as p:
     playing = page.evaluate("!document.querySelector('video').paused")
     page.keyboard.press("Space")
     page.wait_for_timeout(200)
-    check("Space toggles once even with the player focused", playing and page.evaluate("document.querySelector('video').paused"))
+    check(
+        "Space toggles once even with the player focused",
+        playing and page.evaluate("document.querySelector('video').paused"),
+    )
     page.keyboard.press("]")
     check("] speeds up", page.evaluate("document.querySelector('video').playbackRate") == 1.5)
     page.keyboard.press("t")
@@ -515,16 +656,26 @@ with sync_playwright() as p:
     print("thumbnails")
     go("images")
     page.wait_for_selector(".grid .card img")
-    srcs = page.locator(".grid .card img").evaluate_all("els => els.map(e => e.getAttribute('src'))")
+    srcs = page.locator(".grid .card img").evaluate_all(
+        "els => els.map(e => e.getAttribute('src'))"
+    )
     check("gallery asks for thumbnails", any("/api/thumb" in s for s in srcs), srcs[:3])
     wait_js("[...document.querySelectorAll('.grid .card img')].every(i => i.complete)")
-    check("broken image falls back to an icon", page.locator(".card[title='broken.png'] svg").count() == 1)
+    check(
+        "broken image falls back to an icon",
+        page.locator(".card[title='broken.png'] svg").count() == 1,
+    )
     go("videos")
     page.locator("button[aria-label='Gallery view']").click()
     page.wait_for_selector(".grid .card")
-    wait_js("[...document.querySelectorAll('.grid .card img')].every(i => i.complete && i.naturalWidth > 0)")
+    wait_js(
+        "[...document.querySelectorAll('.grid .card img')].every(i => i.complete && i.naturalWidth > 0)"
+    )
     check("video folder shows posters", page.locator(".grid .card .badge").count() == 2)
-    check("unreadable video shows an icon and no badge", page.locator(".card[title='corrupt.mp4'] .badge").count() == 0)
+    check(
+        "unreadable video shows an icon and no badge",
+        page.locator(".card[title='corrupt.mp4'] .badge").count() == 0,
+    )
     snap(page, "16-video-gallery")
 
     print("outline")
@@ -545,7 +696,9 @@ with sync_playwright() as p:
     print("settings")
     page.locator("#settings-btn").click()
     page.wait_for_selector("#settings")
-    check("settings panel opens", "Thumbnails in galleries" in page.locator("#settings").inner_text())
+    check(
+        "settings panel opens", "Thumbnails in galleries" in page.locator("#settings").inner_text()
+    )
     snap(page, "18-settings")
     page.locator("#settings label.opt", has_text="JSONL files as tables").locator("input").uncheck()
     page.keyboard.press("Escape")
@@ -558,7 +711,6 @@ with sync_playwright() as p:
     page.mouse.click(900, 400)
     check("clicking outside closes settings", page.locator("#settings").count() == 0)
 
-
     print("recent, favorites, tags")
     # Fresh page with a clean slate: the server above has seen visits already.
     page.goto(base + "/#/")
@@ -567,26 +719,51 @@ with sync_playwright() as p:
     for _ in range(3):
         if page.locator("#places .place").count() == 0:
             break
-        page.evaluate("changePlaces({op: 'clear-recent'})")
-        page.wait_for_timeout(200)
-    check("no sections when there's nothing to show", page.locator("#places .place").count() == 0 and page.locator("#files-head").is_hidden())
+        page.evaluate(
+            "fetch('/__shelf/api/places', {method: 'POST', body: JSON.stringify({op: 'clear-recent'}),"
+            " headers: {'Content-Type': 'application/json', 'X-Shelf-Request': '1'}})"
+        )
+        page.reload()
+        page.wait_for_selector("#tree .row")
+        page.wait_for_timeout(300)
+    check(
+        "no sections when there's nothing to show",
+        page.locator("#places .place").count() == 0 and page.locator("#files-head").is_hidden(),
+    )
     go("docs/guide.md")
     page.wait_for_selector(".md h1")
     go("config.json")
     page.wait_for_selector(".code-view")
     page.wait_for_selector("#places [data-section=recent]")
-    recent = lambda: page.locator("#places section:has([data-section=recent]) .place-row .label").all_inner_texts()
+
+    def recent():
+        return page.locator(
+            "#places section:has([data-section=recent]) .place-row .label"
+        ).all_inner_texts()
+
     wait_js("document.querySelector('#places .place-row .label')?.textContent === 'config.json'")
-    check("recent lists opened files, newest first", recent()[:2] == ["config.json", "guide.md"], recent())
+    check(
+        "recent lists opened files, newest first",
+        recent()[:2] == ["config.json", "guide.md"],
+        recent(),
+    )
     check("the tree gets a Files heading", page.locator("#files-head").is_visible())
 
     page.locator("#star-btn").click()
     page.wait_for_selector("#places [data-section=favorites]")
     check("star adds a favorite", page.locator("#star-btn.on").count() == 1)
     page.wait_for_selector("#starmenu input")
-    check("and offers an optional nickname", "Added to favorites" in page.locator("#starmenu").inner_text()
-          and page.evaluate("document.activeElement.getAttribute('aria-label')") == "Nickname")
-    favorites = lambda: page.locator("#places section:has([data-section=favorites]) .place-row .label").all_inner_texts()
+    check(
+        "and offers an optional nickname",
+        "Added to favorites" in page.locator("#starmenu").inner_text()
+        and page.evaluate("document.activeElement.getAttribute('aria-label')") == "Nickname",
+    )
+
+    def favorites():
+        return page.locator(
+            "#places section:has([data-section=favorites]) .place-row .label"
+        ).all_inner_texts()
+
     check("favorites section", favorites() == ["config.json"], favorites())
 
     go("docs/guide.md")
@@ -597,10 +774,18 @@ with sync_playwright() as p:
     page.keyboard.press("Enter")
     page.wait_for_selector("#chips .chip")
     check("tagging shows a chip", page.locator("#chips .chip").inner_text().strip() == "review")
-    check("each tag gets a section", page.locator("#places [data-section='tag:review']").count() == 1)
+    check(
+        "each tag gets a section", page.locator("#places [data-section='tag:review']").count() == 1
+    )
     box = page.locator("#tagmenu").bounding_box()
     tag_button = page.locator("#tag-btn").bounding_box()
-    check("tag menu opens under its button", box["y"] >= tag_button["y"] + tag_button["height"] and box["height"] < 400 and box["x"] > 600, box)
+    check(
+        "tag menu opens under its button",
+        box["y"] >= tag_button["y"] + tag_button["height"]
+        and box["height"] < 400
+        and box["x"] > 600,
+        box,
+    )
     snap(page, "19-tag-menu")
     page.keyboard.press("Escape")
     go("README.md")
@@ -609,49 +794,86 @@ with sync_playwright() as p:
     page.wait_for_selector("#tagmenu .suggest button")
     check("existing tags are suggested", "review" in page.locator("#tagmenu .suggest").inner_text())
     page.locator("#tagmenu .suggest button", has_text="review").click()
-    wait_js("document.querySelectorAll('#places section:has([data-section=\"tag:review\"]) .place-row').length === 2")
+    wait_js(
+        "document.querySelectorAll('#places section:has([data-section=\"tag:review\"]) .place-row').length === 2"
+    )
     check("a tag collects several files", True)
     page.keyboard.press("Escape")
-    box = lambda selector: page.locator(selector).bounding_box()
+
+    def box(selector):
+        return page.locator(selector).bounding_box()
+
     page.evaluate("document.querySelector('#browse').scrollTop = 40")
     page.wait_for_timeout(100)
-    check("a section's heading sticks while you're inside it", abs(box("#places [data-section=recent]")["y"] - box("#browse")["y"]) < 2)
+    check(
+        "a section's heading sticks while you're inside it",
+        abs(box("#places [data-section=recent]")["y"] - box("#browse")["y"]) < 2,
+    )
     page.evaluate("document.querySelector('#browse').scrollTop = 0")
 
     go("many/sample_1400.txt")
     page.wait_for_selector(".code-view")
     page.wait_for_timeout(400)
     browse, row, files = box("#browse"), box("#tree .row.current"), box("#files-head")
-    check("the open file scrolls into view below the stuck heading",
-          row["y"] >= files["y"] + files["height"] - 1 and row["y"] + row["height"] <= browse["y"] + browse["height"] + 1, (row, files, browse))
-    check("only the Files heading is frozen", abs(files["y"] - browse["y"]) < 2 and box("#places [data-section=recent]")["y"] < browse["y"])
+    check(
+        "the open file scrolls into view below the stuck heading",
+        row["y"] >= files["y"] + files["height"] - 1
+        and row["y"] + row["height"] <= browse["y"] + browse["height"] + 1,
+        (row, files, browse),
+    )
+    check(
+        "only the Files heading is frozen",
+        abs(files["y"] - browse["y"]) < 2
+        and box("#places [data-section=recent]")["y"] < browse["y"],
+    )
     snap(page, "21-sticky-files")
     page.locator("#files-head").click()
     page.wait_for_timeout(200)
-    check("the frozen heading collapses its section", page.locator("#tree").is_hidden() and box("#places [data-section=recent]")["y"] >= browse["y"] - 1)
+    check(
+        "the frozen heading collapses its section",
+        page.locator("#tree").is_hidden()
+        and box("#places [data-section=recent]")["y"] >= browse["y"] - 1,
+    )
     page.locator("#files-head").click()
     page.evaluate("document.querySelector('#browse').scrollTop = 0")
-    page.locator("#places section:has([data-section=recent]) .place-row", has_text="config.json").click()
+    page.locator(
+        "#places section:has([data-section=recent]) .place-row", has_text="config.json"
+    ).click()
     page.wait_for_selector(".code-view")
     page.wait_for_timeout(400)
-    check("opening a recent file doesn't scroll the sidebar away", page.evaluate("document.querySelector('#browse').scrollTop") == 0)
+    check(
+        "opening a recent file doesn't scroll the sidebar away",
+        page.evaluate("document.querySelector('#browse').scrollTop") == 0,
+    )
     snap(page, "20-places")
 
     page.reload()
     page.wait_for_selector("#places [data-section=favorites]")
-    check("favorites and tags are kept on the server", favorites() == ["config.json"] and page.locator("#places [data-section='tag:review']").count() == 1)
+    check(
+        "favorites and tags are kept on the server",
+        favorites() == ["config.json"]
+        and page.locator("#places [data-section='tag:review']").count() == 1,
+    )
 
     row = page.locator("#places section:has([data-section=recent]) .place-row", has_text="guide.md")
     row.hover()
     row.locator(".row-x").click()
-    wait_js("![...document.querySelectorAll('#places section')].find(s => s.querySelector('[data-section=recent]'))?.textContent.includes('guide.md')")
+    wait_js(
+        "![...document.querySelectorAll('#places section')].find(s => s.querySelector('[data-section=recent]'))?.textContent.includes('guide.md')"
+    )
     check("a file can be removed from recent", "guide.md" not in recent(), recent())
 
     page.locator("#places [data-section=recent]").click()
-    check("sections collapse", page.locator("#places section:has([data-section=recent]) .place-row").count() == 0)
+    check(
+        "sections collapse",
+        page.locator("#places section:has([data-section=recent]) .place-row").count() == 0,
+    )
     page.reload()
     page.wait_for_selector("#places [data-section=recent]")
-    check("collapsed stays collapsed", page.locator("#places section:has([data-section=recent]) .place-row").count() == 0)
+    check(
+        "collapsed stays collapsed",
+        page.locator("#places section:has([data-section=recent]) .place-row").count() == 0,
+    )
     page.locator("#places [data-section=recent]").click()
 
     go("images/frame_1.png")
@@ -660,14 +882,22 @@ with sync_playwright() as p:
         page.keyboard.press("ArrowRight")
         page.wait_for_timeout(300)
     page.wait_for_timeout(300)
-    check("paging with arrow keys doesn't flood recent", recent()[0] == "frame_1.png" and "frame_3.png" not in recent(), recent()[:4])
+    check(
+        "paging with arrow keys doesn't flood recent",
+        recent()[0] == "frame_1.png" and "frame_3.png" not in recent(),
+        recent()[:4],
+    )
 
     page.once("dialog", lambda dialog: dialog.accept("to read"))
-    page.locator("#places [data-section='tag:review'] .tools button", has_text="Rename").click(force=True)
+    page.locator("#places [data-section='tag:review'] .tools button", has_text="Rename").click(
+        force=True
+    )
     page.wait_for_selector("#places [data-section='tag:to read']")
     check("rename a tag", page.locator("#places [data-section='tag:review']").count() == 0)
     page.once("dialog", lambda dialog: dialog.accept())
-    page.locator("#places [data-section='tag:to read'] .tools button", has_text="Delete").click(force=True)
+    page.locator("#places [data-section='tag:to read'] .tools button", has_text="Delete").click(
+        force=True
+    )
     wait_js("!document.querySelector('#places [data-section^=\"tag:\"]')")
     check("delete a tag", True)
     go("config.json")
@@ -675,22 +905,39 @@ with sync_playwright() as p:
     page.locator("#star-btn").click()
     page.locator("#starmenu button", has_text="Remove").click()
     wait_js("!document.querySelector('#places [data-section=favorites]')")
-    check("Remove in the star box unstars", page.locator("#star-btn.on").count() == 0 and page.locator("#starmenu").count() == 0)
+    check(
+        "Remove in the star box unstars",
+        page.locator("#star-btn.on").count() == 0 and page.locator("#starmenu").count() == 0,
+    )
 
     print("nicknames")
-    fav_label = lambda: page.locator("#places section:has([data-section=favorites]) .place-row .label").inner_text()
-    fav_where = lambda: page.locator("#places section:has([data-section=favorites]) .place-row .where-inline").inner_text()
+
+    def fav_label():
+        return page.locator(
+            "#places section:has([data-section=favorites]) .place-row .label"
+        ).inner_text()
+
+    def fav_where():
+        return page.locator(
+            "#places section:has([data-section=favorites]) .place-row .where-inline"
+        ).inner_text()
+
     go("docs/guide.md")
     page.wait_for_selector(".md h1")
     page.locator("#star-btn").click()
     page.wait_for_selector("#starmenu input")
     page.keyboard.type("Team guide")
     page.keyboard.press("Enter")
-    wait_js("document.querySelector('#places [data-section=favorites]')?.closest('section').textContent.includes('Team guide')")
+    wait_js(
+        "document.querySelector('#places [data-section=favorites]')?.closest('section').textContent.includes('Team guide')"
+    )
     check("a nickname becomes the main name", fav_label() == "Team guide", fav_label())
     check("with the full path to its right", fav_where() == "docs/guide.md", fav_where())
     check("the star box closes on Enter", page.locator("#starmenu").count() == 0)
-    check("the star's tooltip names it", "Team guide" in page.locator("#star-btn").get_attribute("title"))
+    check(
+        "the star's tooltip names it",
+        "Team guide" in page.locator("#star-btn").get_attribute("title"),
+    )
     page.evaluate("document.querySelector('#browse').scrollTop = 0")
     page.locator("#places section:has([data-section=favorites]) .place-row").hover()
     snap(page, "22-nickname")
@@ -704,35 +951,60 @@ with sync_playwright() as p:
     row.locator("button[aria-label='Rename (nickname)']").click()
     page.wait_for_selector("#starmenu input")
     menu, side = page.locator("#starmenu").bounding_box(), page.locator("#sidebar").bounding_box()
-    check("✎ opens the same box as the star, not a browser prompt",
-          not dialogs and page.locator("#starmenu input").input_value() == "Team guide"
-          and "docs/guide.md" in page.locator("#starmenu .pop-path").inner_text())
-    check("the box sits by the sidebar row, inside the window",
-          menu["x"] >= 8 and menu["x"] + menu["width"] <= 1360 - 7 and menu["x"] < side["x"] + side["width"] + 40, menu)
+    check(
+        "✎ opens the same box as the star, not a browser prompt",
+        not dialogs
+        and page.locator("#starmenu input").input_value() == "Team guide"
+        and "docs/guide.md" in page.locator("#starmenu .pop-path").inner_text(),
+    )
+    check(
+        "the box sits by the sidebar row, inside the window",
+        menu["x"] >= 8
+        and menu["x"] + menu["width"] <= 1360 - 7
+        and menu["x"] < side["x"] + side["width"] + 40,
+        menu,
+    )
     snap(page, "23-rename-box")
     page.locator("#starmenu input").fill("Guide v2")
     page.keyboard.press("Enter")
-    wait_js("document.querySelector('#places section:has([data-section=favorites]) .place-row .label')?.textContent === 'Guide v2'")
+    wait_js(
+        "document.querySelector('#places section:has([data-section=favorites]) .place-row .label')?.textContent === 'Guide v2'"
+    )
     check("rename from the sidebar", page.locator("#starmenu").count() == 0)
     page.locator("#star-btn").click()
     page.wait_for_selector("#starmenu input")
-    check("the star box shows the current nickname", page.locator("#starmenu input").input_value() == "Guide v2"
-          and "Added" not in page.locator("#starmenu").inner_text())
+    check(
+        "the star box shows the current nickname",
+        page.locator("#starmenu input").input_value() == "Guide v2"
+        and "Added" not in page.locator("#starmenu").inner_text(),
+    )
     page.locator("#starmenu input").fill("zzz")
     page.keyboard.press("Escape")
     page.wait_for_timeout(200)
-    check("Escape cancels an edit", fav_label() == "Guide v2" and page.locator("#starmenu").count() == 0)
+    check(
+        "Escape cancels an edit",
+        fav_label() == "Guide v2" and page.locator("#starmenu").count() == 0,
+    )
     page.locator("#star-btn").click()
     page.locator("#starmenu input").fill("")
     page.mouse.click(700, 500)
-    wait_js("document.querySelector('#places section:has([data-section=favorites]) .place-row .label')?.textContent === 'guide.md'")
-    check("clearing it and clicking away goes back to the file name, with the folder on the right", fav_where() == "docs", fav_where())
+    wait_js(
+        "document.querySelector('#places section:has([data-section=favorites]) .place-row .label')?.textContent === 'guide.md'"
+    )
+    check(
+        "clearing it and clicking away goes back to the file name, with the folder on the right",
+        fav_where() == "docs",
+        fav_where(),
+    )
     page.locator("#star-btn").click()
     page.locator("#starmenu button", has_text="Remove").click()
     wait_js("!document.querySelector('#places [data-section=favorites]')")
 
     print("chrome")
-    width = lambda: page.evaluate("document.querySelector('#sidebar').offsetWidth")
+
+    def width():
+        return page.evaluate("document.querySelector('#sidebar').offsetWidth")
+
     before = width()
     box = page.locator("#resizer").bounding_box()
     page.mouse.move(box["x"] + 2, 300)
@@ -747,7 +1019,7 @@ with sync_playwright() as p:
     page.locator("#actions button[aria-label='Switch theme']").click()
     page.wait_for_timeout(100)
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
-    check("dark theme", bg == "rgb(25, 25, 25)", bg)
+    check("dark theme", bg == "rgb(21, 23, 26)", bg)
     go("docs/guide.md")
     page.wait_for_selector(".md h1")
     snap(page, "10-dark-markdown")
@@ -756,7 +1028,11 @@ with sync_playwright() as p:
     snap(page, "11-dark-csv")
     page.reload()
     page.wait_for_selector("table.data tbody tr:not(.pad) td")
-    check("theme and route survive reload", page.evaluate("document.documentElement.dataset.theme") == "dark" and page.url.endswith("big.csv"))
+    check(
+        "theme and route survive reload",
+        page.evaluate("document.documentElement.dataset.theme") == "dark"
+        and page.url.endswith("big.csv"),
+    )
 
     # Copy must work on plain HTTP, where navigator.clipboard is missing.
     insecure = browser.new_context(viewport={"width": 1000, "height": 700})
@@ -766,15 +1042,23 @@ with sync_playwright() as p:
     other.wait_for_selector(".md h1")
     other.locator("#actions button[aria-label='Copy full path']").click()
     other.wait_for_timeout(100)
-    check("copy works without the clipboard API", other.locator("#actions button[aria-label='Copy full path']").get_attribute("title") == "Copied")
+    check(
+        "copy works without the clipboard API",
+        other.locator("#actions button[aria-label='Copy full path']").get_attribute("title")
+        == "Copied",
+    )
     insecure.close()
 
     print("phone")
-    phone = browser.new_context(viewport={"width": 390, "height": 780}, has_touch=True, is_mobile=True)
+    phone = browser.new_context(
+        viewport={"width": 390, "height": 780}, has_touch=True, is_mobile=True
+    )
     mobile = phone.new_page()
     mobile.goto(f"{base}/#/docs/guide.md")
     mobile.wait_for_selector(".md h1")
-    overflow = mobile.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    overflow = mobile.evaluate(
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
     check("no sideways page scroll", overflow <= 0, overflow)
     mobile.screenshot(path=str(shots / "12-phone.png"))
     mobile.locator("#expand").tap()
@@ -788,8 +1072,13 @@ with sync_playwright() as p:
     phone.close()
 
     # Console noise that the deliberately broken fixtures cause on purpose.
-    expected = ("404", "416", "Failed to load resource", "Unsafe attempt to initiate navigation",
-                "isn't a valid Office file")
+    expected = (
+        "404",
+        "416",
+        "Failed to load resource",
+        "Unsafe attempt to initiate navigation",
+        "isn't a valid Office file",
+    )
     unexpected = [e for e in errors if not any(text in e for text in expected)]
     print("console")
     check("no script errors", not unexpected, unexpected[:5])
@@ -798,8 +1087,12 @@ with sync_playwright() as p:
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             free = probe.getsockname()[1]
-        proc = subprocess.Popen([sys.executable, "-m", "shelf", str(free), str(demo), "-b", "127.0.0.1", *flags],
-                                cwd=repo, stdout=subprocess.DEVNULL, env=ENV)
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "shelf", str(free), str(demo), "-b", "127.0.0.1", *flags],
+            cwd=repo,
+            stdout=subprocess.DEVNULL,
+            env=ENV,
+        )
         atexit.register(proc.terminate)
         for _ in range(100):
             try:
@@ -825,7 +1118,10 @@ with sync_playwright() as p:
     tab.locator("input[name=token]").fill(token)
     tab.locator("button").click()
     tab.wait_for_selector("#tree .row")
-    check("right token opens the app", tab.url.rstrip("/").endswith(url.split("//")[1]) or "token=" not in tab.url)
+    check(
+        "right token opens the app",
+        tab.url.rstrip("/").endswith(url.split("//")[1]) or "token=" not in tab.url,
+    )
     check("token gone from the address bar", "token=" not in tab.url, tab.url)
     tab.reload()
     tab.wait_for_selector("#tree .row")
@@ -849,17 +1145,24 @@ with sync_playwright() as p:
 
     print("tailscale identity")
     proc, url = start_server("--allow-user", "me@example.com", "--allow-user", "you@example.com")
-    stranger = browser.new_context(extra_http_headers={"Tailscale-User-Login": "someone@else.example"})
+    stranger = browser.new_context(
+        extra_http_headers={"Tailscale-User-Login": "someone@else.example"}
+    )
     tab = stranger.new_page()
     tab.goto(url + "/")
     check("other tailnet users are refused", "No access" in tab.content())
     stranger.close()
-    member = browser.new_context(extra_http_headers={"Tailscale-User-Login": "me@example.com", "Tailscale-User-Name": "Me"})
+    member = browser.new_context(
+        extra_http_headers={"Tailscale-User-Login": "me@example.com", "Tailscale-User-Name": "Me"}
+    )
     tab = member.new_page()
     tab.goto(url + "/")
     tab.wait_for_selector("#tree .row")
     tab.locator("#settings-btn").click()
-    check("allowed user gets in and sees who they are", "Signed in as Me" in tab.locator("#settings").inner_text())
+    check(
+        "allowed user gets in and sees who they are",
+        "Signed in as Me" in tab.locator("#settings").inner_text(),
+    )
     tab.keyboard.press("Escape")
     tab.goto(url + "/#/config.json")
     tab.wait_for_selector("#star-btn")
@@ -871,7 +1174,11 @@ with sync_playwright() as p:
     tab.goto(url + "/#/config.json")
     tab.wait_for_selector("#star-btn")
     tab.wait_for_timeout(500)
-    check("each person has their own favorites", tab.locator("#places [data-section=favorites]").count() == 0 and tab.locator("#star-btn.on").count() == 0)
+    check(
+        "each person has their own favorites",
+        tab.locator("#places [data-section=favorites]").count() == 0
+        and tab.locator("#star-btn.on").count() == 0,
+    )
     other.close()
     proc.terminate()
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shelf-server"
 dynamic = ["version"]
-description = "A read-only file server with a Notion-style UI: a drop-in for python -m http.server"
+description = "A read-only file server that renders Markdown, HTML, tables, Office files, images, and video in the browser"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Ivan Arevalo" }]
@@ -25,6 +25,14 @@ classifiers = [
     "Topic :: System :: Filesystems",
 ]
 
+[dependency-groups]
+# Tools for working on shelf. The package itself has no dependencies.
+dev = [
+    "ruff==0.17.6; python_version >= '3.10'",
+    "pre-commit==4.6.2; python_version >= '3.10'",
+    "playwright>=1.48; python_version >= '3.10'",
+]
+
 [project.urls]
 Homepage = "https://github.com/ivanfarevalo/shelf"
 Documentation = "https://github.com/ivanfarevalo/shelf/tree/main/docs"
@@ -35,10 +43,36 @@ Changelog = "https://github.com/ivanfarevalo/shelf/blob/main/CHANGELOG.md"
 shelf = "shelf.cli:main"
 
 [tool.setuptools]
-packages = ["shelf"]
+packages = ["shelf", "shelf.office"]
 
 [tool.setuptools.dynamic]
 version = { attr = "shelf.__version__" }
 
 [tool.setuptools.package-data]
-shelf = ["static/*", "static/vendor/*", "static/vendor/LICENSES/*"]
+shelf = ["static/*", "static/js/*", "static/js/viewers/*", "static/vendor/*", "static/vendor/LICENSES/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+extend-exclude = ["shelf/static"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import order
+    "B",        # bugbear
+    "UP",       # pyupgrade, to the oldest supported Python
+    "SIM",      # simplifications
+    "C4",       # comprehensions
+    "PIE",
+    "RET",      # return statements
+    "RUF",
+]
+ignore = [
+    "E501",     # the formatter decides line breaks; long strings stay whole
+]
+allowed-confusables = ["×"]  # the multiplication sign in image dimensions
+
+[tool.ruff.lint.isort]
+known-first-party = ["shelf"]

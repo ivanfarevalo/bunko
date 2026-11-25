@@ -1,7 +1,7 @@
 """Run with: python3 -m unittest discover -s tests"""
+
 import http.client
 import json
-import os
 import pathlib
 import socket
 import sys
@@ -13,8 +13,10 @@ from urllib.parse import quote
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from shelf import server as shelf  # noqa: E402
-from shelf.cli import parse_args  # noqa: E402
+from shelf import server as shelf
+from shelf.cli import parse_args
+from shelf.index import SearchIndex
+from shelf.paths import Root, natural_key
 
 
 class ServerCase(unittest.TestCase):
@@ -49,9 +51,9 @@ class ServerCase(unittest.TestCase):
         (root / "dangling").symlink_to(base / "gone")
         cls.root = root
 
-        shelf_root = shelf.Root(str(root), cls.hidden)
-        index = shelf.SearchIndex(shelf_root)
-        handler = type("H", (shelf.Handler,), {"root": shelf_root, "index": index})
+        shelf_root = Root(str(root), cls.hidden)
+        index = SearchIndex(shelf_root)
+        handler = shelf.make_handler(shelf_root, index)
         cls.server = shelf.Server(("127.0.0.1", 0), handler)
         cls.port = cls.server.server_address[1]
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
@@ -77,8 +79,8 @@ class ServerCase(unittest.TestCase):
         return response, body
 
     def api(self, name, **params):
-        query = "&".join("%s=%s" % (k, quote(v, safe="")) for k, v in params.items())
-        response, body = self.get("/__shelf/api/%s?%s" % (name, query))
+        query = "&".join("{}={}".format(k, quote(v, safe="")) for k, v in params.items())
+        response, body = self.get(f"/__shelf/api/{name}?{query}")
         return response.status, json.loads(body)
 
 
@@ -233,6 +235,7 @@ class Files(ServerCase):
         import contextlib
         import io
         import struct
+
         captured = io.StringIO()
         with contextlib.redirect_stderr(captured):
             for _ in range(3):
@@ -243,7 +246,7 @@ class Files(ServerCase):
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
                 sock.close()
             time.sleep(0.3)
-            response, body = self.get("/hello.txt")
+            _response, body = self.get("/hello.txt")
         self.assertEqual(body, b"0123456789")
         self.assertNotIn("Traceback", captured.getvalue())
 
@@ -277,17 +280,21 @@ class Routing(ServerCase):
         self.assertEqual(body, shelf.FRAME_FOLDER_PAGE)
 
     def test_static_revalidates(self):
-        response, body = self.get("/__shelf/static/app.js")
+        response, body = self.get("/__shelf/static/js/app.js")
         self.assertEqual(response.status, 200)
         self.assertTrue(body)
-        again, _ = self.get("/__shelf/static/app.js", headers={"If-None-Match": response.getheader("ETag")})
+        again, _ = self.get(
+            "/__shelf/static/js/app.js", headers={"If-None-Match": response.getheader("ETag")}
+        )
         self.assertEqual(again.status, 304)
 
 
 class Api(ServerCase):
     def test_list_sorts_folders_first_then_naturally(self):
         _, data = self.api("list", path="sub")
-        self.assertEqual([e["name"] for e in data["entries"]], ["deep", "frame_2.png", "frame_10.png"])
+        self.assertEqual(
+            [e["name"] for e in data["entries"]], ["deep", "frame_2.png", "frame_10.png"]
+        )
 
     def test_stat(self):
         status, data = self.api("stat", path="hello.txt")
@@ -331,7 +338,7 @@ class Api(ServerCase):
 
 class Helpers(unittest.TestCase):
     def test_hidden_rule_only_counts_what_is_below_the_shared_path(self):
-        root = shelf.Root("/home/me/.cache/demo/tree", False)
+        root = Root("/home/me/.cache/demo/tree", False)
         self.assertTrue(root.allowed_target("/home/me/.cache/demo/tree"))
         self.assertTrue(root.allowed_target("/home/me/.cache/demo/tree/a/b.txt"))
         self.assertTrue(root.allowed_target("/home/me/.cache/demo/other/b.txt"))
@@ -342,12 +349,14 @@ class Helpers(unittest.TestCase):
 
     def test_natural_key_compares_the_stem_first(self):
         names = ["clip10.mp4", "clip2.webm", "clip.mp4", "frame_10.png", "frame_2.png"]
-        self.assertEqual(sorted(names, key=shelf.natural_key),
-                         ["clip.mp4", "clip2.webm", "clip10.mp4", "frame_2.png", "frame_10.png"])
+        self.assertEqual(
+            sorted(names, key=natural_key),
+            ["clip.mp4", "clip2.webm", "clip10.mp4", "frame_2.png", "frame_10.png"],
+        )
 
     def test_natural_key_handles_non_decimal_digits(self):
         names = ["²", "a10", "a2", "A1"]
-        self.assertEqual(sorted(names, key=shelf.natural_key), ["A1", "a2", "a10", "²"])
+        self.assertEqual(sorted(names, key=natural_key), ["A1", "a2", "a10", "²"])
 
     def test_args(self):
         parse = parse_args
