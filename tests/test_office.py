@@ -19,8 +19,8 @@ import office_samples as make
 from office_samples import cell, grid, p, r, table
 from test_features import Running
 
-from shelf import office
-from shelf.office import Office, OfficeError, common, excel
+from bunko import office
+from bunko.office import Office, OfficeError, common, excel
 
 
 class Folder(unittest.TestCase):
@@ -531,36 +531,36 @@ class Http(unittest.TestCase):
         return response.status, json.loads(body)
 
     def test_word_page(self):
-        status, data = self.get_json("/__shelf/api/office?path=report.docx")
+        status, data = self.get_json("/__bunko/api/office?path=report.docx")
         self.assertEqual(status, 200)
         self.assertEqual(data["type"], "docx")
         self.assertIn("<h1>Summary</h1>", data["html"])
 
     def test_excel_sheets(self):
-        status, data = self.get_json("/__shelf/api/office?path=results.xlsx")
+        status, data = self.get_json("/__bunko/api/office?path=results.xlsx")
         self.assertEqual((status, data["type"], data["sheet"]), (200, "xlsx", 0))
         self.assertEqual(data["rows"][0][0], "split")
-        status, data = self.get_json("/__shelf/api/office?path=results.xlsx&sheet=1")
+        status, data = self.get_json("/__bunko/api/office?path=results.xlsx&sheet=1")
         self.assertEqual(data["rows"][-1], ["Total", "12800.5"])
-        status, data = self.get_json("/__shelf/api/office?path=results.xlsx&sheet=7")
+        status, data = self.get_json("/__bunko/api/office?path=results.xlsx&sheet=7")
         self.assertEqual(status, 422)
 
     def test_errors_are_explained(self):
-        status, data = self.get_json("/__shelf/api/office?path=broken.docx")
+        status, data = self.get_json("/__bunko/api/office?path=broken.docx")
         self.assertEqual(status, 422)
         self.assertIn("valid Office file", data["error"])
 
     def test_dotfiles_stay_hidden(self):
-        status, _ = self.get_json("/__shelf/api/office?path=.private/secret.docx")
+        status, _ = self.get_json("/__bunko/api/office?path=.private/secret.docx")
         self.assertEqual(status, 404)
         response, _ = self.server.get(
-            "/__shelf/api/office-part?path=.private/secret.docx&part=word/media/chart.png"
+            "/__bunko/api/office-part?path=.private/secret.docx&part=word/media/chart.png"
         )
         self.assertEqual(response.status, 404)
 
     def test_embedded_image(self):
         response, body = self.server.get(
-            "/__shelf/api/office-part?path=report.docx&part=word/media/chart.png&v=1"
+            "/__bunko/api/office-part?path=report.docx&part=word/media/chart.png&v=1"
         )
         self.assertEqual(response.status, 200)
         self.assertEqual(response.getheader("Content-Type"), "image/png")
@@ -568,7 +568,7 @@ class Http(unittest.TestCase):
         self.assertIn("immutable", response.getheader("Cache-Control"))
         self.assertTrue(body.startswith(b"\x89PNG"))
         response, _ = self.server.get(
-            "/__shelf/api/office-part?path=report.docx&part=word/document.xml"
+            "/__bunko/api/office-part?path=report.docx&part=word/document.xml"
         )
         self.assertEqual(response.status, 404)
 

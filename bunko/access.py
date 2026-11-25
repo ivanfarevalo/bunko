@@ -3,7 +3,7 @@
 Three modes:
 
 - open: anyone who can reach the port. The default, as with http.server.
-- tailscale: only named Tailscale users. Shelf listens on loopback behind
+- tailscale: only named Tailscale users. Bunko listens on loopback behind
   `tailscale serve`, which strips any identity headers a client sends and adds
   the real Tailscale-User-Login. This is the recommended mode.
 - token: anyone holding a secret token. The token arrives once in the URL, then
@@ -61,13 +61,13 @@ class TokenStore:
     """The token file, re-read when it changes so rotation needs no restart."""
 
     def __init__(self, path: str | None = None):
-        self.env = os.environ.get("SHELF_TOKEN") or None
+        self.env = os.environ.get("BUNKO_TOKEN") or None
         self.path = path or default_token_path()
         self._seen = None
         self._token = None
 
     def describe(self) -> str:
-        return "the SHELF_TOKEN environment variable" if self.env else self.path
+        return "the BUNKO_TOKEN environment variable" if self.env else self.path
 
     def ensure(self) -> str:
         """Return the token, creating the file on first use."""
@@ -79,7 +79,7 @@ class TokenStore:
 
     def rotate(self) -> str:
         if self.env:
-            raise SystemExit("shelf: the token comes from SHELF_TOKEN; change it there")
+            raise SystemExit("bunko: the token comes from BUNKO_TOKEN; change it there")
         token = secrets.token_urlsafe(24)
         write_private(self.path, token + "\n")
         return token
@@ -127,11 +127,11 @@ class Access:
     @property
     def cookie_name(self) -> str:
         # Cookies are shared by every port on a host, so name ours by port.
-        return f"shelf_{self.port}"
+        return f"bunko_{self.port}"
 
     def session_value(self, token: str) -> str:
         # The cookie holds a derivative, so the raw token never sits in it.
-        return hmac.new(token.encode(), b"shelf-session-v1", hashlib.sha256).hexdigest()
+        return hmac.new(token.encode(), b"bunko-session-v1", hashlib.sha256).hexdigest()
 
     def session_cookie(self, token: str) -> str:
         value = self.session_value(token)
@@ -198,7 +198,7 @@ class Access:
 # Filled in with .replace("{message}", ...) rather than %-formatting, because the CSS has % signs.
 LOGIN_PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>shelf · sign in</title>
+<title>Bunko · sign in</title>
 <style>
 :root{--bg:#fff;--text:#1e2329;--muted:#5d6670;--line:rgba(30,35,41,.16);--accent:#0e7c86;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#15171a;--text:#e3e6ea;--muted:#9aa3ad;--line:rgba(227,230,234,.14);--accent:#2a8f99;color-scheme:dark}}
@@ -208,13 +208,13 @@ input{width:100%;height:38px;padding:0 10px;border:1px solid var(--line);border-
 input:focus{outline:2px solid var(--accent);outline-offset:-1px}button{margin-top:10px;width:100%;height:38px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
 .err{color:#e5484d;margin:-6px 0 14px}
 </style></head><body><main>
-<h1>shelf</h1><p>This server needs an access token. Paste it here, or open the link the server printed.</p>
+<h1>Bunko</h1><p>This server needs an access token. Paste it here, or open the link the server printed.</p>
 {message}<form method="get" action="/"><input name="token" type="password" autocomplete="current-password" placeholder="Access token" aria-label="Access token" autofocus required><button>Open</button></form>
 </main></body></html>"""
 
 DENIED_PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>shelf · no access</title>
+<title>Bunko · no access</title>
 <style>
 :root{--bg:#fff;--text:#1e2329;--muted:#5d6670;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#15171a;--text:#e3e6ea;--muted:#9aa3ad;color-scheme:dark}}

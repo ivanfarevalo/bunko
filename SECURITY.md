@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security problems privately, through
-[GitHub's private vulnerability reporting](https://github.com/ivanfarevalo/shelf/security/advisories/new),
+[GitHub's private vulnerability reporting](https://github.com/ivanfarevalo/bunko/security/advisories/new),
 not in a public issue. Include what an attacker could read or do, and the
 steps to reproduce it.
 
@@ -12,7 +12,7 @@ patch release, and the advisory credits you unless you'd rather it didn't.
 
 ## What counts
 
-shelf's job is to let the right people read one folder and nobody else read
+Bunko's job is to let the right people read one folder and nobody else read
 anything. Reports in these areas are especially welcome:
 
 - Reading files outside the served folder, or dotfiles, without `--hidden`.

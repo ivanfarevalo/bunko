@@ -1,6 +1,6 @@
 # Features
 
-Everything shelf does today, by area. The user-facing details, with
+Everything Bunko does today, by area. The user-facing details, with
 screenshots, are in [docs/features.md](../docs/features.md).
 
 ## Viewing files
@@ -51,7 +51,7 @@ screenshots, are in [docs/features.md](../docs/features.md).
 - **Dotfile protection,** including through symlinks, and refusal of path
   tricks. *0.1*
 - **Runs anywhere:** in the foreground, in tmux, as a systemd user service
-  (`shelf service`), or as a single `.pyz` file. *0.1, service 0.2*
+  (`bunko service`), or as a single `.pyz` file. *0.1, service 0.2*
 
 ## Interface
 

@@ -28,7 +28,7 @@ switch the theme.
 
 The top of the sidebar holds your own shortcuts, above the folder tree:
 
-- **Recent:** the last files you opened, newest first, showing 10 (shelf keeps
+- **Recent:** the last files you opened, newest first, showing 10 (Bunko keeps
   50). Paging through a folder with `←` `→` doesn't count, so flipping through
   a gallery doesn't push everything else out. Hover a file and press × to drop
   it, or use **Clear** on the heading.
@@ -56,7 +56,7 @@ Sections appear only when they have something in them. A file that's been
 deleted drops out of Recent, but stays in Favorites and tags, dimmed, in case
 it comes back (an unmounted disk, say).
 
-**Where they're kept.** On the server, in `~/.config/shelf/state/`, not in the
+**Where they're kept.** On the server, in `~/.config/bunko/state/`, not in the
 browser, so they follow you between your laptop and phone, and survive clearing
 browser data. With [`--allow-user`](security.md), each Tailscale user has their
 own lists. In token or open mode, everyone shares one set. They're stored per
@@ -68,8 +68,8 @@ served folder, and never in the folder itself.
 
 | Files | Viewer |
 |---|---|
-| `.md` | GitHub-flavored Markdown, with highlighted code blocks, copy buttons, tables, task lists, and front matter folded away. Relative links open in shelf, relative images load, and external links open in a new tab. |
-| `.html` | The page itself, with its CSS, scripts, `fetch` calls, and relative assets working. Links inside the page update shelf's address bar. A folder containing `index.html` opens that page, as a web server would. |
+| `.md` | GitHub-flavored Markdown, with highlighted code blocks, copy buttons, tables, task lists, and front matter folded away. Relative links open in Bunko, relative images load, and external links open in a new tab. |
+| `.html` | The page itself, with its CSS, scripts, `fetch` calls, and relative assets working. Links inside the page update Bunko's address bar. A folder containing `index.html` opens that page, as a web server would. |
 | Images | Fit to the pane; click to view at full size; `←` `→` move between images in the folder. |
 | Video and audio | The browser's player, with seeking and the [review tools](#video-review). |
 | `.csv` `.tsv` | A [table](#tables). The delimiter is detected (`,` `;` tab `\|`). |
@@ -135,7 +135,7 @@ and marks it with `≈`.
 
 CSV, TSV, and JSONL open as a table that stays fast at any size:
 
-- **Loading in pieces.** shelf reads 8 MB at a time and loads more as you
+- **Loading in pieces.** Bunko reads 8 MB at a time and loads more as you
   scroll near the end. *Load more* fetches the next piece on demand.
 - **Virtualized rows.** Only the rows on screen exist in the page, so 400,000
   rows scroll as smoothly as 40.
@@ -157,7 +157,7 @@ use the text button in the top bar, which is remembered, or turn off
 
 ## Word and Excel
 
-shelf reads Word and Excel files itself, using only Python's standard library.
+Bunko reads Word and Excel files itself, using only Python's standard library.
 The server doesn't need Office, LibreOffice, or any extra packages.
 
 **Word (`.docx`, `.docm`, `.dotx`)** opens as a page in the same style as
@@ -197,7 +197,7 @@ Charts, pivot tables, cell formatting, and merged-cell layout aren't shown.
 ![An Excel workbook, with its sheet tabs](img/excel.png)
 
 Older formats (`.doc`, `.xls`) and PowerPoint files show a download card
-instead. Saving them as `.docx` or `.xlsx` makes them open in shelf. A file
+instead. Saving them as `.docx` or `.xlsx` makes them open in Bunko. A file
 that's damaged or password-protected gets a message saying so.
 
 ## Markdown outline
@@ -214,8 +214,8 @@ instead.
 
 A folder that's mostly images or videos opens as a gallery, and the toggle at
 the top switches between list and gallery views per folder. With ffmpeg on the
-server, shelf generates small thumbnails for large images and poster frames for
-videos, and caches them in `~/.cache/shelf/thumbs`. Small images are sent as
+server, Bunko generates small thumbnails for large images and poster frames for
+videos, and caches them in `~/.cache/bunko/thumbs`. Small images are sent as
 they are. Without ffmpeg, galleries load full images, and videos show an icon.
 
 ![A gallery](img/gallery.png)

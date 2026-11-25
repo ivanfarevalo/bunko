@@ -3,15 +3,15 @@
 ## The goal
 
 **A private reading room for a folder: everything in it rendered, searchable,
-and eventually answerable.** You point shelf at files that already exist, on
+and eventually answerable.** You point Bunko at files that already exist, on
 your machine or a shared server, and you can read them, find things in them,
 and ask questions about them, without uploading anything anywhere.
 
 Two things set it apart from the "chat with your documents" tools:
 
 - **Works in place.** No ingestion step, no sync, no database. The folder is
-  the source of truth, and shelf follows it live.
-- **Answers you can check.** Because shelf already renders every file well,
+  the source of truth, and Bunko follows it live.
+- **Answers you can check.** Because Bunko already renders every file well,
   an AI answer can link to the exact line, table row, or moment in a video,
   and that source opens right beside the answer.
 
@@ -40,12 +40,8 @@ Two things set it apart from the "chat with your documents" tools:
 
 ## Open questions
 
-- **The name.** "shelf" collides with other projects, including the Dart
-  package `shelf` and several products. The PyPI package is `shelf-server`
-  for now. A short, unique name that suits both a file server and an AI
-  reading tool is still being chosen.
-- **Publishing.** The repository is local. It moves to GitHub once the name
-  is settled, so the URL doesn't change twice.
+- **Publishing.** The repository is local. Next it goes to GitHub as
+  `ivanfarevalo/bunko`, and to PyPI as `bunko`.
 - **How far into team features to go.** Per-folder permissions and simpler
   sign-in would make it suitable for organizations, but they add real
   complexity to something that is currently one small process.

@@ -217,7 +217,7 @@ export function showArticle(ctx, article) {
   }
 }
 
-// Word documents arrive as HTML converted on the server (shelf/office).
+// Word documents arrive as HTML converted on the server (bunko/office).
 export async function viewDocx(ctx) {
   const data = await api("office", { path: ctx.path });
   if (!ctx.alive()) return;

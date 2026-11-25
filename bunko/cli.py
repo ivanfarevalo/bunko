@@ -1,4 +1,4 @@
-"""Command line: `shelf [PORT] [DIR] [options]`, plus `shelf service` and `shelf token`."""
+"""Command line: `bunko [PORT] [DIR] [options]`, plus `bunko service` and `bunko token`."""
 
 from __future__ import annotations
 
@@ -17,22 +17,22 @@ from .places import Places
 from .server import DEFAULT_PORT, Server, bind, make_handler
 
 EPILOG = """examples:
-  shelf                          serve the current folder on port 8000 (or the next free one)
-  shelf 8099 ~/reports           choose the port and folder
-  shelf 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+  bunko                          serve the current folder on port 8000 (or the next free one)
+  bunko 8099 ~/reports           choose the port and folder
+  bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
                                  recommended on a shared network: put `tailscale serve` in front
-  shelf 8100 ~/reports --token   require an access token (shelf prints the link)
+  bunko 8100 ~/reports --token   require an access token (bunko prints the link)
 
 subcommands:
-  shelf service install|uninstall|status|logs|restart|list   run as a systemd user service
-  shelf token [--new] [--port N]                             show or replace the access token
+  bunko service install|uninstall|status|logs|restart|list   run as a systemd user service
+  bunko token [--new] [--port N]                             show or replace the access token
 
-docs: https://github.com/ivanfarevalo/shelf/tree/main/docs"""
+docs: https://github.com/ivanfarevalo/bunko/tree/main/docs"""
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="shelf",
+        prog="bunko",
         description="Serve a folder read-only, with a browser UI that renders its files.",
         epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -64,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="replace the token before starting (implies --token)",
     )
     access.add_argument(
-        "--token-file", metavar="PATH", help="where the token lives (default ~/.config/shelf/token)"
+        "--token-file", metavar="PATH", help="where the token lives (default ~/.config/bunko/token)"
     )
 
     media = parser.add_argument_group("media")
@@ -72,11 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-thumbnails", action="store_true", help="don't generate thumbnails with ffmpeg"
     )
     media.add_argument(
-        "--cache-dir", metavar="PATH", help="thumbnail cache (default ~/.cache/shelf)"
+        "--cache-dir", metavar="PATH", help="thumbnail cache (default ~/.cache/bunko)"
     )
 
     parser.add_argument("-v", "--verbose", action="store_true", help="log every request")
-    parser.add_argument("--version", action="version", version="shelf " + __version__)
+    parser.add_argument("--version", action="version", version="bunko " + __version__)
     return parser
 
 
@@ -98,7 +98,7 @@ def parse_args(argv=None):
         parser.error("choose one of --allow-user and --token")
     if args.allow_user and not is_loopback(args.bind):
         parser.error(
-            "--allow-user trusts identity headers from `tailscale serve`, so shelf must listen "
+            "--allow-user trusts identity headers from `tailscale serve`, so bunko must listen "
             "only on loopback. Add -b 127.0.0.1 (see docs/security.md)."
         )
     return args
@@ -106,7 +106,7 @@ def parse_args(argv=None):
 
 def token_command(argv) -> None:
     parser = argparse.ArgumentParser(
-        prog="shelf token", description="Show or replace the access token."
+        prog="bunko token", description="Show or replace the access token."
     )
     parser.add_argument(
         "--new", action="store_true", help="replace it; every signed-in browser must sign in again"
@@ -156,7 +156,7 @@ def build_server(args) -> Server:
     """Set up the folder, its services, and the listening socket."""
     directory = os.path.abspath(os.path.expanduser(args.directory or "."))
     if not os.path.isdir(directory):
-        sys.exit("shelf: not a directory: " + directory)
+        sys.exit("bunko: not a directory: " + directory)
     root = Root(directory, args.hidden)
     index = SearchIndex(root)
     tokens = TokenStore(args.token_file) if args.token else None
@@ -195,7 +195,7 @@ def print_banner(server: Server, args) -> None:
             "tailscale": "Tailscale users: " + ", ".join(args.allow_user),
         }[mode]
     )
-    print(f"shelf {__version__}  serving {handler.root.real} ({'; '.join(notes)})")
+    print(f"bunko {__version__}  serving {handler.root.real} ({'; '.join(notes)})")
 
     exposed = args.bind in ("0.0.0.0", "::")
     links = [f"http://{'localhost' if exposed else args.bind}:{port}/"]
@@ -207,7 +207,7 @@ def print_banner(server: Server, args) -> None:
             links = [link + "?token=" + token for link in links]
         else:
             # Never write the secret into service logs.
-            print(f"  token: run `shelf token --port {port}` to print a sign-in link")
+            print(f"  token: run `bunko token --port {port}` to print a sign-in link")
     for link in links:
         print("  " + link)
     if mode == "tailscale":

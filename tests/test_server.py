@@ -13,10 +13,10 @@ from urllib.parse import quote
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from shelf import server as shelf
-from shelf.cli import parse_args
-from shelf.index import SearchIndex
-from shelf.paths import Root, natural_key
+from bunko import server as bunko
+from bunko.cli import parse_args
+from bunko.index import SearchIndex
+from bunko.paths import Root, natural_key
 
 
 class ServerCase(unittest.TestCase):
@@ -51,10 +51,10 @@ class ServerCase(unittest.TestCase):
         (root / "dangling").symlink_to(base / "gone")
         cls.root = root
 
-        shelf_root = Root(str(root), cls.hidden)
-        index = SearchIndex(shelf_root)
-        handler = shelf.make_handler(shelf_root, index)
-        cls.server = shelf.Server(("127.0.0.1", 0), handler)
+        bunko_root = Root(str(root), cls.hidden)
+        index = SearchIndex(bunko_root)
+        handler = bunko.make_handler(bunko_root, index)
+        cls.server = bunko.Server(("127.0.0.1", 0), handler)
         cls.port = cls.server.server_address[1]
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         index.refresh()
@@ -80,7 +80,7 @@ class ServerCase(unittest.TestCase):
 
     def api(self, name, **params):
         query = "&".join("{}={}".format(k, quote(v, safe="")) for k, v in params.items())
-        response, body = self.get(f"/__shelf/api/{name}?{query}")
+        response, body = self.get(f"/__bunko/api/{name}?{query}")
         return response.status, json.loads(body)
 
 
@@ -158,7 +158,7 @@ class Access(ServerCase):
 
     def test_static_cannot_escape(self):
         for name in ("../server.py", "..%2fserver.py", "vendor/../../server.py"):
-            response, _ = self.get("/__shelf/static/" + name)
+            response, _ = self.get("/__bunko/static/" + name)
             self.assertEqual(response.status, 404, name)
 
 
@@ -277,14 +277,14 @@ class Routing(ServerCase):
         response, body = self.get("/site/", headers=frame)
         self.assertEqual(body, b"<h1>site</h1>")
         response, body = self.get("/sub/", headers=frame)
-        self.assertEqual(body, shelf.FRAME_FOLDER_PAGE)
+        self.assertEqual(body, bunko.FRAME_FOLDER_PAGE)
 
     def test_static_revalidates(self):
-        response, body = self.get("/__shelf/static/js/app.js")
+        response, body = self.get("/__bunko/static/js/app.js")
         self.assertEqual(response.status, 200)
         self.assertTrue(body)
         again, _ = self.get(
-            "/__shelf/static/js/app.js", headers={"If-None-Match": response.getheader("ETag")}
+            "/__bunko/static/js/app.js", headers={"If-None-Match": response.getheader("ETag")}
         )
         self.assertEqual(again.status, 304)
 
@@ -371,8 +371,8 @@ class Helpers(unittest.TestCase):
             taken.listen()
             port = taken.getsockname()[1]
             with self.assertRaises(SystemExit):
-                shelf.bind(shelf.Handler, "127.0.0.1", port, fixed=True)
-            found = shelf.bind(shelf.Handler, "127.0.0.1", port, fixed=False)
+                bunko.bind(bunko.Handler, "127.0.0.1", port, fixed=True)
+            found = bunko.bind(bunko.Handler, "127.0.0.1", port, fixed=False)
             self.assertNotEqual(found.server_address[1], port)
             found.server_close()
 

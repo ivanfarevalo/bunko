@@ -31,7 +31,7 @@ export function viewHtml(ctx, page) {
       return;
     }
     const opened = decodeURIComponent(inside.location.pathname).replace(/^\/|\/$/g, "");
-    if (inside.document.title === "shelf:folder") location.hash = appUrl(opened);
+    if (inside.document.title === "bunko:folder") location.hash = appUrl(opened);
     else if (opened !== state.watch) followFrame(opened);
   });
   ctx.fill();

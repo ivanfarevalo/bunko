@@ -41,7 +41,7 @@ jobs:
       - name: Build the zipapp and smoke-test it
         run: |
           python scripts/build_pyz.py
-          python dist/shelf.pyz --version
+          python dist/bunko.pyz --version
 
   browser:
     name: Browser tests

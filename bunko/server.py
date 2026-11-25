@@ -3,7 +3,7 @@
 Files stay at their natural URLs (/a/b.png), as with `python -m http.server`,
 so curl, wget, and links inside served HTML keep working. The app lives at `/`
 and routes with the URL hash (/#/a/b.md). Its assets and API sit under
-/__shelf/.
+/__bunko/.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from .office import Office, OfficeError
 from .paths import Blocked, Root, natural_key
 from .places import PlaceError
 
-PREFIX = "/__shelf/"
+PREFIX = "/__bunko/"
 DEFAULT_PORT = 8000
 CHUNK = 256 * 1024
 MAX_BODY = 16 * 1024
@@ -67,7 +67,7 @@ SHELL_CSP = (
 
 # Served to a frame that follows a link to a folder. The app sees this title and
 # opens the folder itself.
-FRAME_FOLDER_PAGE = b"<!doctype html><title>shelf:folder</title>"
+FRAME_FOLDER_PAGE = b"<!doctype html><title>bunko:folder</title>"
 
 
 def content_type(path: str) -> str:
@@ -102,7 +102,7 @@ def parse_range(header: str, size: int):
     return max(size - length, 0), size - 1
 
 
-# API endpoints under /__shelf/api/, by name, and the Handler methods that answer them.
+# API endpoints under /__bunko/api/, by name, and the Handler methods that answer them.
 ENDPOINTS = {
     "config": "api_config",
     "search": "api_search",
@@ -133,7 +133,7 @@ class Handler(BaseHTTPRequestHandler):
     """One request. The services it uses are class attributes; see `make_handler`."""
 
     protocol_version = "HTTP/1.1"
-    server_version = "shelf/" + __version__
+    server_version = "bunko/" + __version__
     timeout = 120
 
     root: Root
@@ -224,7 +224,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.command == "POST":
             if path != PREFIX + "api/places":
-                return self.send_text(HTTPStatus.NOT_IMPLEMENTED, "shelf is read-only")
+                return self.send_text(HTTPStatus.NOT_IMPLEMENTED, "bunko is read-only")
             return self.change_places()
         if decision.cookie:
             self.pending.append(("Set-Cookie", decision.cookie))
@@ -262,7 +262,7 @@ class Handler(BaseHTTPRequestHandler):
         elif decision.reason == "no-identity":
             body = DENIED_PAGE.replace(
                 "{message}",
-                "This request carries no Tailscale identity. Open shelf through its "
+                "This request carries no Tailscale identity. Open Bunko through its "
                 "<code>tailscale serve</code> address from a device signed in as a person, "
                 "not a tagged device.",
             )
@@ -415,11 +415,11 @@ class Handler(BaseHTTPRequestHandler):
         if not self.places:
             return self.not_found()
         # Cross-site requests can't set a custom header or a JSON content type
-        # without a CORS preflight, which shelf never grants. Sec-Fetch-Site
+        # without a CORS preflight, which bunko never grants. Sec-Fetch-Site
         # catches the rest in current browsers.
         site = self.headers.get("Sec-Fetch-Site")
         if (
-            self.headers.get("X-Shelf-Request") != "1"
+            self.headers.get("X-Bunko-Request") != "1"
             or "application/json" not in self.headers.get("Content-Type", "")
             or (site is not None and site not in ("same-origin", "none"))
         ):
@@ -554,5 +554,5 @@ def bind(handler: type, host: str, port: int, fixed: bool) -> Server:
             return Server((host, candidate), handler)
         except OSError as error:
             if fixed:
-                sys.exit(f"shelf: cannot bind {host}:{candidate}: {error.strerror}")
-    sys.exit(f"shelf: no free port found from {port}")
+                sys.exit(f"bunko: cannot bind {host}:{candidate}: {error.strerror}")
+    sys.exit(f"bunko: no free port found from {port}")

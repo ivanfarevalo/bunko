@@ -20,15 +20,15 @@ from urllib.parse import quote
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from shelf import server as shelf
-from shelf import service
-from shelf.access import Access, TokenStore, decode_rfc2047
-from shelf.cli import parse_args
-from shelf.contents import ContentSearch
-from shelf.index import SKIP_DIRS, SearchIndex
-from shelf.media import Prober, Thumbnails
-from shelf.paths import Root
-from shelf.places import PlaceError, Places
+from bunko import server as bunko
+from bunko import service
+from bunko.access import Access, TokenStore, decode_rfc2047
+from bunko.cli import parse_args
+from bunko.contents import ContentSearch
+from bunko.index import SKIP_DIRS, SearchIndex
+from bunko.media import Prober, Thumbnails
+from bunko.paths import Root
+from bunko.places import PlaceError, Places
 
 FFMPEG = shutil.which("ffmpeg")
 
@@ -38,15 +38,15 @@ def ffmpeg(*args):
 
 
 class Running:
-    """A shelf server on a free loopback port, for one test class."""
+    """A bunko server on a free loopback port, for one test class."""
 
     def __init__(self, root, access=None, **parts):
         self.root = Root(str(root), False)
         self.index = SearchIndex(self.root)
         if access is not None:
             parts["access"] = access
-        handler = shelf.make_handler(self.root, self.index, **parts)
-        self.server = shelf.Server(("127.0.0.1", 0), handler)
+        handler = bunko.make_handler(self.root, self.index, **parts)
+        self.server = bunko.Server(("127.0.0.1", 0), handler)
         self.port = self.server.server_address[1]
         if access is not None:
             access.port = self.port
@@ -103,8 +103,8 @@ class TokenAccess(unittest.TestCase):
         for path in (
             "/",
             "/hello.txt",
-            "/__shelf/api/list?path=",
-            "/__shelf/static/js/app.js",
+            "/__bunko/api/list?path=",
+            "/__bunko/static/js/app.js",
             "/sub%20dir/",
         ):
             response, body = self.srv.get(path)
@@ -154,7 +154,7 @@ class TokenAccess(unittest.TestCase):
             self.assertEqual(response.status, 401, value)
 
     def test_logout_clears_the_cookie(self):
-        response, _ = self.srv.get("/__shelf/logout")
+        response, _ = self.srv.get("/__bunko/logout")
         self.assertEqual(response.status, 302)
         self.assertIn("Max-Age=0", response.getheader("Set-Cookie"))
 
@@ -172,7 +172,7 @@ class TokenAccess(unittest.TestCase):
                 out.write(self.token + "\n")
 
     def test_env_token_wins_and_cannot_be_rotated(self):
-        with mock.patch.dict(os.environ, {"SHELF_TOKEN": "from-env"}):
+        with mock.patch.dict(os.environ, {"BUNKO_TOKEN": "from-env"}):
             store = TokenStore(self.store.path)
             self.assertEqual(store.ensure(), "from-env")
             with self.assertRaises(SystemExit):
@@ -218,7 +218,7 @@ class TailscaleAccess(unittest.TestCase):
 
     def test_config_reports_who_is_signed_in(self):
         _, body = self.srv.get(
-            "/__shelf/api/config",
+            "/__bunko/api/config",
             {
                 "Tailscale-User-Login": "me@example.com",
                 "Tailscale-User-Name": "=?utf-8?q?Ferris_B=C3=BCller?=",
@@ -310,7 +310,7 @@ class Media(unittest.TestCase):
         cls.tmp.cleanup()
 
     def thumb(self, name):
-        return self.srv.get(f"/__shelf/api/thumb?path={quote(name)}&v=1")
+        return self.srv.get(f"/__bunko/api/thumb?path={quote(name)}&v=1")
 
     def test_big_image_gets_a_small_jpeg(self):
         response, body = self.thumb("big.png")
@@ -351,7 +351,7 @@ class Media(unittest.TestCase):
         self.assertEqual(response.status, 404)
 
     def test_probe(self):
-        response, body = self.srv.get("/__shelf/api/probe?path=clip.mp4")
+        response, body = self.srv.get("/__bunko/api/probe?path=clip.mp4")
         facts = json.loads(body)
         self.assertEqual(
             (response.status, facts["fps"], facts["codec"], facts["width"]),
@@ -426,7 +426,7 @@ class Contents(unittest.TestCase):
 
 WRITE = {
     "Content-Type": "application/json",
-    "X-Shelf-Request": "1",
+    "X-Bunko-Request": "1",
     "Sec-Fetch-Site": "same-origin",
 }
 
@@ -592,7 +592,7 @@ class PlacesHttp(unittest.TestCase):
     def post(self, srv, body, headers=WRITE):
         conn = http.client.HTTPConnection("127.0.0.1", srv.port, timeout=10)
         data = json.dumps(body).encode() if not isinstance(body, bytes) else body
-        conn.request("POST", "/__shelf/api/places", body=data, headers=headers)
+        conn.request("POST", "/__bunko/api/places", body=data, headers=headers)
         response = conn.getresponse()
         payload = response.read()
         conn.close()
@@ -601,7 +601,7 @@ class PlacesHttp(unittest.TestCase):
     def test_write_then_read(self):
         status, body = self.post(self.srv, {"op": "favorite", "path": "a.md"})
         self.assertEqual(status, 200)
-        _response, body = self.srv.get("/__shelf/api/places")
+        _response, body = self.srv.get("/__bunko/api/places")
         self.assertEqual(json.loads(body)["favorites"][0]["path"], "a.md")
 
     def test_cross_site_writes_are_refused(self):
@@ -610,15 +610,15 @@ class PlacesHttp(unittest.TestCase):
                 "Content-Type": "application/json",
                 "Sec-Fetch-Site": "same-origin",
             },  # no custom header
-            {"Content-Type": "text/plain", "X-Shelf-Request": "1"},  # a simple form-like request
+            {"Content-Type": "text/plain", "X-Bunko-Request": "1"},  # a simple form-like request
             {
                 "Content-Type": "application/json",
-                "X-Shelf-Request": "1",
+                "X-Bunko-Request": "1",
                 "Sec-Fetch-Site": "cross-site",
             },
             {
                 "Content-Type": "application/json",
-                "X-Shelf-Request": "1",
+                "X-Bunko-Request": "1",
                 "Sec-Fetch-Site": "same-site",
             },
         ]
@@ -679,35 +679,35 @@ class ServiceUnit(unittest.TestCase):
 
     def test_unit_quotes_and_escapes_percent(self):
         text = service.render_unit(
-            "docs", ["/usr/bin/python3", "-m", "shelf", "--directory", "/data/100% done"]
+            "docs", ["/usr/bin/python3", "-m", "bunko", "--directory", "/data/100% done"]
         )
-        self.assertIn("ExecStart=/usr/bin/python3 -m shelf --directory '/data/100%% done'", text)
+        self.assertIn("ExecStart=/usr/bin/python3 -m bunko --directory '/data/100%% done'", text)
         self.assertIn("Restart=on-failure", text)
         self.assertIn("WantedBy=default.target", text)
 
     def test_launcher_ignores_the_working_directory(self):
-        with mock.patch.object(sys, "argv", ["/usr/local/bin/shelf"]):
-            self.assertEqual(service.launcher()[1:], ["-I", "-u", "-m", "shelf"])
+        with mock.patch.object(sys, "argv", ["/usr/local/bin/bunko"]):
+            self.assertEqual(service.launcher()[1:], ["-I", "-u", "-m", "bunko"])
         with tempfile.NamedTemporaryFile(suffix=".pyz") as pyz, mock.patch.object(
             sys, "argv", [pyz.name]
         ):
             self.assertEqual(service.launcher()[1:], ["-I", "-u", pyz.name])
 
-    def test_isolated_launch_ignores_a_shelf_folder_in_the_working_directory(self):
+    def test_isolated_launch_ignores_a_bunko_folder_in_the_working_directory(self):
         # The bug this guards against: services start in ~, and with an editable
-        # install `python -m shelf` imported a checkout at ~/shelf instead.
+        # install `python -m bunko` imported a checkout at ~/bunko instead.
         with tempfile.TemporaryDirectory() as cwd:
-            os.makedirs(os.path.join(cwd, "shelf"))
-            with open(os.path.join(cwd, "shelf", "__init__.py"), "w") as out:
+            os.makedirs(os.path.join(cwd, "bunko"))
+            with open(os.path.join(cwd, "bunko", "__init__.py"), "w") as out:
                 out.write("print('DECOY')\n")
-            with open(os.path.join(cwd, "shelf", "__main__.py"), "w") as out:
+            with open(os.path.join(cwd, "bunko", "__main__.py"), "w") as out:
                 out.write("")
             plain = subprocess.run(
-                [sys.executable, "-m", "shelf"], cwd=cwd, capture_output=True, text=True
+                [sys.executable, "-m", "bunko"], cwd=cwd, capture_output=True, text=True
             )
             self.assertIn("DECOY", plain.stdout)
             isolated = subprocess.run(
-                [sys.executable, "-I", "-u", "-m", "shelf", "--version"],
+                [sys.executable, "-I", "-u", "-m", "bunko", "--version"],
                 cwd=cwd,
                 capture_output=True,
                 text=True,

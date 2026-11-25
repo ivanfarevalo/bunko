@@ -1,4 +1,4 @@
-# shelf
+# Bunko
 
 **A read-only file server that renders what it serves.** Point it at a folder
 and open it in a browser: Markdown, HTML reports, Word documents, Excel
@@ -6,7 +6,9 @@ workbooks, CSV and JSONL tables, images, video, PDFs, code, and logs all open
 in place, with the folder tree and search in a sidebar. It's a drop-in
 replacement for `python -m http.server`, with no dependencies beyond Python.
 
-![A folder in shelf](docs/img/folder.png)
+*Bunko* (文庫) is Japanese for a small library, or a collection of books.
+
+![A folder in Bunko](docs/img/folder.png)
 
 It's built for reading files where they live, usually on a remote machine:
 
@@ -24,42 +26,42 @@ It's built for reading files where they live, usually on a remote machine:
 Python 3.8 or later. Nothing else is required.
 
 ```bash
-uv tool install git+https://github.com/ivanfarevalo/shelf
+uv tool install git+https://github.com/ivanfarevalo/bunko
 # or
-pipx install git+https://github.com/ivanfarevalo/shelf
+pipx install git+https://github.com/ivanfarevalo/bunko
 ```
 
 On a machine where you can't install anything, copy one file instead:
 
 ```bash
-python3 scripts/build_pyz.py        # in a clone; writes dist/shelf.pyz
-scp dist/shelf.pyz server:
-ssh server python3 shelf.pyz 8099   # same options as the shelf command
+python3 scripts/build_pyz.py        # in a clone; writes dist/bunko.pyz
+scp dist/bunko.pyz server:
+ssh server python3 bunko.pyz 8099   # same options as the bunko command
 ```
 
 ### 2. Start it
 
 ```bash
-shelf                  # serve the current folder on port 8000, or the next free one
-shelf 8099 ~/reports   # choose the port and the folder
+bunko                  # serve the current folder on port 8000, or the next free one
+bunko 8099 ~/reports   # choose the port and the folder
 ```
 
-shelf prints the address to open, then serves until you press `Ctrl+C`.
+Bunko prints the address to open, then serves until you press `Ctrl+C`.
 
 ### 3. Open it
 
-| Where shelf runs | How to open it |
+| Where Bunko runs | How to open it |
 |---|---|
 | Your own machine | Open the printed `http://localhost:8000/` |
-| A remote machine, just for you | `shelf 8099 ~/reports -b 127.0.0.1` there, then `ssh -L 8099:localhost:8099 server` here, and open `http://localhost:8099/` |
+| A remote machine, just for you | `bunko 8099 ~/reports -b 127.0.0.1` there, then `ssh -L 8099:localhost:8099 server` here, and open `http://localhost:8099/` |
 | A remote machine, for named people on your tailnet (recommended) | See [Security](#security) below |
-| A remote machine, behind a password-like token | `shelf 8099 ~/reports --token`, then open the link it prints |
+| A remote machine, behind a password-like token | `bunko 8099 ~/reports --token`, then open the link it prints |
 
 ### 4. Keep it running (optional)
 
 ```bash
-tmux new-session -d -s shelf 'shelf 8099 ~/reports'             # in tmux
-shelf service install --name reports -- 8099 ~/reports          # as a systemd user service
+tmux new-session -d -s bunko 'bunko 8099 ~/reports'             # in tmux
+bunko service install --name reports -- 8099 ~/reports          # as a systemd user service
 ```
 
 [docs/deployment.md](docs/deployment.md) covers both, plus the optional tools
@@ -97,7 +99,7 @@ that add thumbnails (ffmpeg) and fast content search (ripgrep).
 
 ## Security
 
-shelf never changes the folder it serves, hides dotfiles (including through
+Bunko never changes the folder it serves, hides dotfiles (including through
 symlinks), and refuses path tricks. **By default, though, anyone who can reach the port can read the
 folder,** just as with `http.server`. Choose an access mode:
 
@@ -111,7 +113,7 @@ folder,** just as with `http.server`. Choose an access mode:
 The recommended setup takes two commands:
 
 ```bash
-shelf 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
+bunko 8100 ~/reports -b 127.0.0.1 --allow-user you@example.com
 sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
 # open https://<machine>.<tailnet>.ts.net:8100/
 ```
@@ -126,7 +128,7 @@ sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
 - [Command-line reference](docs/cli.md)
 - [Development: environment, linters, tests, practices](docs/development.md)
 
-The [project wiki](wiki/Home.md) tracks what shelf is, where it's going, how
+The [project wiki](wiki/Home.md) tracks what Bunko is, where it's going, how
 it's built, and what has been done so far, phase by phase.
 
 ## License

@@ -1,4 +1,4 @@
-"""`shelf service ...`: run shelf as a systemd user service.
+"""`bunko service ...`: run bunko as a systemd user service.
 
 A user service starts at login (or at boot, with lingering enabled), restarts
 after a crash, and logs to the journal. It needs no root.
@@ -22,21 +22,21 @@ def unit_dir() -> str:
 
 
 def unit_name(name: str) -> str:
-    return f"shelf-{name}.service"
+    return f"bunko-{name}.service"
 
 
 def launcher() -> list:
-    """The command that starts this same shelf, wherever it was installed.
+    """The command that starts this same bunko, wherever it was installed.
 
     -I (isolated) keeps the working directory off sys.path: services start in
-    the home directory, where a checkout named "shelf" would otherwise shadow
+    the home directory, where a checkout named "bunko" would otherwise shadow
     the installed package. It also ignores PYTHON* variables, so -u replaces
     PYTHONUNBUFFERED for prompt journal logs.
     """
     script = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else ""
     if script.endswith(".pyz") and os.path.isfile(script):
         return [sys.executable, "-I", "-u", script]
-    return [sys.executable, "-I", "-u", "-m", "shelf"]
+    return [sys.executable, "-I", "-u", "-m", "bunko"]
 
 
 def serve_arguments(args: list) -> list:
@@ -71,8 +71,8 @@ def render_unit(name: str, command: list) -> str:
     exec_start = " ".join(shlex.quote(part) for part in command).replace("%", "%%")
     return (
         "[Unit]\n"
-        f"Description=shelf file server ({name})\n"
-        "Documentation=https://github.com/ivanfarevalo/shelf\n"
+        f"Description=bunko file server ({name})\n"
+        "Documentation=https://github.com/ivanfarevalo/bunko\n"
         "\n"
         "[Service]\n"
         f"ExecStart={exec_start}\n"
@@ -105,9 +105,9 @@ def linger_enabled() -> bool | None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="shelf service",
-        description="Run shelf as a systemd user service.",
-        epilog="Example: shelf service install --name docs -- 8100 ~/docs -b 127.0.0.1 --allow-user you@example.com",
+        prog="bunko service",
+        description="Run bunko as a systemd user service.",
+        epilog="Example: bunko service install --name docs -- 8100 ~/docs -b 127.0.0.1 --allow-user you@example.com",
     )
     sub = parser.add_subparsers(dest="action", required=True)
     install = sub.add_parser("install", help="create, enable and start a service")
@@ -115,11 +115,11 @@ def build_parser() -> argparse.ArgumentParser:
     install.add_argument(
         "--print", action="store_true", help="print the unit file instead of installing it"
     )
-    install.add_argument("serve", nargs=argparse.REMAINDER, help="shelf arguments, after --")
+    install.add_argument("serve", nargs=argparse.REMAINDER, help="bunko arguments, after --")
     for action in ("uninstall", "status", "logs", "restart"):
         command = sub.add_parser(action, help=f"{action} a service")
         command.add_argument("--name", default="default")
-    sub.add_parser("list", help="list installed shelf services")
+    sub.add_parser("list", help="list installed bunko services")
     return parser
 
 
@@ -135,7 +135,7 @@ def main(argv: list) -> None:
     if args.action == "install":
         return install(args, unit, path)
     if not os.path.exists(path):
-        sys.exit(f"shelf: no service named {args.name!r} ({path})")
+        sys.exit(f"bunko: no service named {args.name!r} ({path})")
     if args.action == "uninstall":
         systemctl("disable", "--now", unit, check=False)
         os.remove(path)
@@ -155,7 +155,7 @@ def list_services() -> None:
     names = []
     if os.path.isdir(folder):
         names = sorted(
-            name for name in os.listdir(folder) if re.fullmatch(r"shelf-.+\.service", name)
+            name for name in os.listdir(folder) if re.fullmatch(r"bunko-.+\.service", name)
         )
     for unit in names:
         state = subprocess.run(
@@ -163,7 +163,7 @@ def list_services() -> None:
         ).stdout.strip()
         print(f"{unit:<30} {state or 'unknown'}")
     if not names:
-        print("No shelf services installed.")
+        print("No bunko services installed.")
 
 
 def install(args, unit: str, path: str) -> None:
@@ -174,8 +174,8 @@ def install(args, unit: str, path: str) -> None:
         return
     if not shutil.which("systemctl"):
         sys.exit(
-            "shelf: systemctl not found. Use `shelf service install --print` and adapt the unit, "
-            "or run shelf in tmux."
+            "bunko: systemctl not found. Use `bunko service install --print` and adapt the unit, "
+            "or run bunko in tmux."
         )
     os.makedirs(unit_dir(), exist_ok=True)
     with open(path, "w") as out:
@@ -185,8 +185,8 @@ def install(args, unit: str, path: str) -> None:
     print(
         f"Installed {unit}\n"
         f"  unit:   {path}\n"
-        f"  status: shelf service status --name {args.name}\n"
-        f"  logs:   shelf service logs --name {args.name}"
+        f"  status: bunko service status --name {args.name}\n"
+        f"  logs:   bunko service logs --name {args.name}"
     )
     if linger_enabled() is False:
         print(

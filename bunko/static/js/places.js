@@ -31,7 +31,7 @@ export async function changePlaces(change, { quiet = false } = {}) {
   try {
     response = await fetch(`${API}places`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Shelf-Request": "1" },
+      headers: { "Content-Type": "application/json", "X-Bunko-Request": "1" },
       body: JSON.stringify(change),
     });
   } catch {

@@ -1,6 +1,6 @@
 # Implementation
 
-How shelf is built, and why. The file-by-file layout is in
+How Bunko is built, and why. The file-by-file layout is in
 [docs/development.md](../docs/development.md#layout).
 
 ## Shape of the system
@@ -21,7 +21,7 @@ browser ──HTTP──> ThreadingHTTPServer ──> Handler (server.py)
   Everything else is a service with no knowledge of HTTP, bound to the handler
   by `make_handler(root, index, **services)`. Tests build servers with just the
   services they need.
-- **API endpoints are a table.** `/__shelf/api/<name>` looks the name up in
+- **API endpoints are a table.** `/__bunko/api/<name>` looks the name up in
   `ENDPOINTS` or `PATH_ENDPOINTS`. Path endpoints get the resolved path and its
   `stat` result, so the access check happens in exactly one place.
 
@@ -32,8 +32,8 @@ browser ──HTTP──> ThreadingHTTPServer ──> Handler (server.py)
 | `/` | The app shell (`index.html`) |
 | `/#/<path>?line=&q=&t=&sheet=` | A view in the app. Routing is by the hash, so the server never confuses an app route with a file. |
 | `/<path>` | The raw file, as `http.server` would serve it, with range requests and ETags |
-| `/__shelf/static/...` | The app's own files |
-| `/__shelf/api/...` | JSON: `config`, `stat`, `list`, `search`, `grep`, `places`, `thumb`, `probe`, `office`, `office-part` |
+| `/__bunko/static/...` | The app's own files |
+| `/__bunko/api/...` | JSON: `config`, `stat`, `list`, `search`, `grep`, `places`, `thumb`, `probe`, `office`, `office-part` |
 
 Keeping raw files at their natural paths is what lets served HTML reports load
 their own data and images, and lets `curl` keep working.
@@ -51,7 +51,7 @@ content search, and places all use the same rules.
 `Access.decide` runs on every request and returns a `Decision`:
 
 - **open:** everyone is allowed.
-- **tailscale:** shelf listens on loopback behind `tailscale serve`, which
+- **tailscale:** Bunko listens on loopback behind `tailscale serve`, which
   strips any identity headers a client sends and adds the real
   `Tailscale-User-Login`. Logins are matched against `--allow-user` patterns.
   The login also keys each person's places.
@@ -59,20 +59,20 @@ content search, and places all use the same rules.
   then lives in an `HttpOnly` cookie holding an HMAC of it, named by port. The
   token file is re-read when it changes, so rotation needs no restart.
 
-The only write endpoint, `POST /__shelf/api/places`, requires a custom header
+The only write endpoint, `POST /__bunko/api/places`, requires a custom header
 and a JSON content type, and checks `Sec-Fetch-Site`, which together stop
 cross-site requests.
 
-## State shelf keeps
+## State Bunko keeps
 
 Nothing is written to the served folder. `storage.py` decides where things go:
 
 | What | Where |
 |---|---|
-| Access token | `~/.config/shelf/token` (mode 0600) |
-| Recent, favorites, tags | `~/.config/shelf/state/<hash of root>.json`, a section per user |
-| Thumbnails | `~/.cache/shelf/thumbs/`, keyed by path, mtime, and size |
-| Service units | `~/.config/systemd/user/shelf-<name>.service` |
+| Access token | `~/.config/bunko/token` (mode 0600) |
+| Recent, favorites, tags | `~/.config/bunko/state/<hash of root>.json`, a section per user |
+| Thumbnails | `~/.cache/bunko/thumbs/`, keyed by path, mtime, and size |
+| Service units | `~/.config/systemd/user/bunko-<name>.service` |
 | Browser preferences | `localStorage`: theme, sidebar width, open folders, collapsed sections, viewer settings |
 
 ## Search
@@ -86,7 +86,7 @@ Nothing is written to the served folder. `storage.py` decides where things go:
 
 ## Office files
 
-`shelf/office/` converts Word and Excel with the standard library:
+`bunko/office/` converts Word and Excel with the standard library:
 
 - `common.py` opens the zip and parses XML through a tree builder that strips
   namespaces and refuses any DOCTYPE. Every part is read through a capped
@@ -145,4 +145,4 @@ document's `word/` folder, under a sandboxing CSP.
 | Places stored on the server | They follow a person between devices, and survive clearing the browser. |
 | Office conversion on the server | Keeps the client simple, and the extracted text will feed content search and AI questions. |
 | ES modules instead of one script | Clear module boundaries without adding a build step. |
-| Own color palette and look | shelf shouldn't imitate any particular product. |
+| Own color palette and look | Bunko shouldn't imitate any particular product. |

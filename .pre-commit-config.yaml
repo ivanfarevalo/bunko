@@ -5,9 +5,9 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^shelf/static/vendor/
+        exclude: ^bunko/static/vendor/
       - id: end-of-file-fixer
-        exclude: ^shelf/static/vendor/
+        exclude: ^bunko/static/vendor/
       - id: check-yaml
       - id: check-toml
       - id: check-merge-conflict
@@ -15,7 +15,7 @@ repos:
         args: [--maxkb=600]
       - id: mixed-line-ending
         args: [--fix=lf]
-        exclude: ^shelf/static/vendor/
+        exclude: ^bunko/static/vendor/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.6
@@ -29,4 +29,4 @@ repos:
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@2.6.8"]
-        files: ^shelf/static/[^/]+\.(js|css|json)$
+        files: ^bunko/static/[^/]+\.(js|css|json)$

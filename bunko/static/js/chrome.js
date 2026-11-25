@@ -91,7 +91,7 @@ export function renderChrome() {
       ),
     ].filter(Boolean),
   );
-  document.title = `${path ? baseName(path) : state.config.name} · shelf`;
+  document.title = `${path ? baseName(path) : state.config.name} · Bunko`;
   renderPlaceActions();
   renderPlaces();
 }

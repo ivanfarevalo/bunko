@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
   "files": {
-    "includes": ["shelf/static/**/*.js", "shelf/static/*.css", "!shelf/static/vendor", "biome.json"]
+    "includes": ["bunko/static/**/*.js", "bunko/static/*.css", "!bunko/static/vendor", "biome.json"]
   },
   "formatter": {
     "indentStyle": "space",

@@ -1,4 +1,4 @@
-"""Where shelf keeps its own files: config, state, and caches. Never the served folder."""
+"""Where bunko keeps its own files: config, state, and caches. Never the served folder."""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ def config_home() -> str:
 
 
 def config_dir() -> str:
-    return os.path.join(config_home(), "shelf")
+    return os.path.join(config_home(), "bunko")
 
 
 def cache_dir() -> str:
-    return os.path.join(_xdg("XDG_CACHE_HOME", ".cache"), "shelf")
+    return os.path.join(_xdg("XDG_CACHE_HOME", ".cache"), "bunko")
 
 
 def write_private(path: str, text: str) -> None:

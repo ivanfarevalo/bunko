@@ -3,7 +3,7 @@
 export const store = {
   get(key, fallback) {
     try {
-      const value = localStorage.getItem(`shelf.${key}`);
+      const value = localStorage.getItem(`bunko.${key}`);
       return value === null ? fallback : JSON.parse(value);
     } catch {
       return fallback;
@@ -11,7 +11,7 @@ export const store = {
   },
   set(key, value) {
     try {
-      localStorage.setItem(`shelf.${key}`, JSON.stringify(value));
+      localStorage.setItem(`bunko.${key}`, JSON.stringify(value));
     } catch {
       /* private mode */
     }

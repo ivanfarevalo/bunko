@@ -2,7 +2,7 @@
 
 import { rawUrl } from "./paths.js";
 
-export const API = "/__shelf/api/";
+export const API = "/__bunko/api/";
 
 export async function api(name, params) {
   const response = await fetch(`${API + name}?${new URLSearchParams(params || {})}`);

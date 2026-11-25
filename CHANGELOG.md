@@ -2,6 +2,9 @@
 
 ## 0.3.0
 
+- **Renamed from shelf to Bunko.** The command and package are `bunko`, its
+  files live in `~/.config/bunko` and `~/.cache/bunko`, and its URLs sit under
+  `/__bunko/`.
 - **Recent files, favorites, and tags** at the top of the sidebar. Star and tag
   buttons sit in the top bar, and each tag gets its own section. Sections
   collapse, and the heading of the section you're in sticks to the top as the
@@ -18,14 +21,14 @@
 - A new color palette, in light and dark.
 - Paging through files with the arrow keys doesn't count toward Recent.
 - Dropped browser connections no longer print tracebacks.
-- shelf's first write endpoint (`/__shelf/api/places`), protected against
+- Bunko's first write endpoint (`/__bunko/api/places`), protected against
   cross-site requests. The served folder is still never written.
 
 ## 0.2.0
 
 - **Access control:**
   - Tailscale identity (`--allow-user`, behind `tailscale serve`).
-  - Access tokens (`--token`, `shelf token`) with a sign-in page, an
+  - Access tokens (`--token`, `bunko token`) with a sign-in page, an
     `HttpOnly` cookie, rotation without restart, and Bearer support for scripts.
   - A warning at startup when the server is open to the network.
 - **Search inside files**, using ripgrep or a Python fallback. Results open the
@@ -39,11 +42,11 @@
 - **Outline beside Markdown,** optional and remembered.
 - **Settings panel:** theme, viewer options, keyboard shortcuts, and who you're
   signed in as.
-- **`shelf service`:** install, inspect, and remove systemd user services.
+- **`bunko service`:** install, inspect, and remove systemd user services.
 - **Links into files:** `?line=` and `?q=`.
 - Fix: natural sort now compares names without their extension first, so
   `clip.mp4` sorts before `clip2.webm`.
-- The command line moved to `shelf.cli`.
+- The command line moved to `bunko.cli`.
 
 ## 0.1.0
 

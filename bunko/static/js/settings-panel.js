@@ -5,7 +5,7 @@ import { $, h } from "./dom.js";
 import { state } from "./state.js";
 import { setSetting, settings } from "./store.js";
 
-export const DOCS = "https://github.com/ivanfarevalo/shelf/tree/main/docs";
+export const DOCS = "https://github.com/ivanfarevalo/bunko/tree/main/docs";
 
 export const SHORTCUTS = [
   ["Ctrl/⌘ K", "Search file names"],
@@ -69,13 +69,13 @@ export function openSettings(onChange) {
   if (access.mode === "tailscale")
     account = h("p", null, "Signed in as ", h("b", null, access.user || "?"), " through Tailscale.");
   else if (access.mode === "token")
-    account = h("p", null, "Signed in with an access token. ", h("a", { href: "/__shelf/logout" }, "Sign out"));
+    account = h("p", null, "Signed in with an access token. ", h("a", { href: "/__bunko/logout" }, "Sign out"));
   else
     account = h(
       "p",
       null,
       "No access control on this server. ",
-      h("a", { href: `${DOCS}/security.md`, target: "_blank", rel: "noopener" }, "Securing shelf"),
+      h("a", { href: `${DOCS}/security.md`, target: "_blank", rel: "noopener" }, "Securing Bunko"),
     );
   const panel = h(
     "div",
@@ -107,7 +107,7 @@ export function openSettings(onChange) {
     h(
       "div",
       { class: "pop-foot" },
-      `shelf ${state.config.version} · `,
+      `Bunko ${state.config.version} · `,
       h("a", { href: DOCS.replace(/\/tree\/main\/docs$/, ""), target: "_blank", rel: "noopener" }, "Docs and source"),
     ),
   );

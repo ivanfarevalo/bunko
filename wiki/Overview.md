@@ -1,8 +1,8 @@
 # Overview
 
-## What shelf is
+## What Bunko is
 
-shelf is a self-hosted, read-only file server that renders the files it
+Bunko is a self-hosted, read-only file server that renders the files it
 serves. Run one command in a folder and open the address it prints: the folder
 tree and search sit in a sidebar, and whatever you open shows in the main pane,
 properly rendered. That includes Markdown, HTML reports, Word documents, Excel
@@ -22,7 +22,7 @@ machine:
   logs, HTML reports, video clips, and large tables, read from a browser,
   without copying anything back.
 - **People working with AI coding agents.** Agents like Claude Code write
-  plans, notes, context files, and HTML reports. shelf shows them as they're
+  plans, notes, context files, and HTML reports. Bunko shows them as they're
   written, privately, on your own machine, rather than on a hosted page.
 - **Small teams sharing a server.** One read-only place for documents, with
   search, per-person favorites and tags, and access tied to identity
@@ -30,7 +30,7 @@ machine:
 
 ## What it deliberately isn't
 
-- **Not an editor.** shelf is read-only. That makes it safe to point at real
+- **Not an editor.** Bunko is read-only. That makes it safe to point at real
   data, and easy to approve for a team. Editing would turn it into a wiki or a
   CMS, which is a different and crowded product.
 - **Not a sync or upload tool.** It reads files where they already are. There's

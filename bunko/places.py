@@ -1,7 +1,7 @@
 """Recent files, favorites and tags: the sidebar's "places".
 
 Kept on the server, so they follow a person between browsers and devices, in
-~/.config/shelf/state/<root>.json. Nothing is written to the served folder.
+~/.config/bunko/state/<root>.json. Nothing is written to the served folder.
 Each Tailscale user gets their own lists; open and token modes share one set.
 """
 
@@ -186,7 +186,7 @@ class Places:
         path = self._check(change.get("path"))
         if path not in entry["favorites"]:
             if len(entry["favorites"]) >= FAVORITES_MAX:
-                raise PlaceError(f"That's the most favorites shelf keeps ({FAVORITES_MAX}).")
+                raise PlaceError(f"That's the most favorites bunko keeps ({FAVORITES_MAX}).")
             entry["favorites"].append(path)
         if "name" in change:
             _set_nickname(entry, path, change["name"])
@@ -212,7 +212,7 @@ class Places:
         existing = _find_tag(tags, name)
         if existing is None:
             if len(tags) >= TAGS_MAX:
-                raise PlaceError(f"That's the most tags shelf keeps ({TAGS_MAX}).")
+                raise PlaceError(f"That's the most tags bunko keeps ({TAGS_MAX}).")
             existing = name
             tags[name] = []
         if path not in tags[existing]:

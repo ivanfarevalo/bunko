@@ -29,7 +29,7 @@ with socket.socket() as probe:
     port = probe.getsockname()[1]
 base = f"http://127.0.0.1:{port}"
 # Keep favorites, recents and thumbnails out of the real ~/.config and ~/.cache.
-scratch = tempfile.mkdtemp(prefix="shelf-e2e-")
+scratch = tempfile.mkdtemp(prefix="bunko-e2e-")
 atexit.register(shutil.rmtree, scratch, True)
 ENV = dict(
     os.environ,
@@ -37,7 +37,7 @@ ENV = dict(
     XDG_CACHE_HOME=os.path.join(scratch, "cache"),
 )
 server = subprocess.Popen(
-    [sys.executable, "-m", "shelf", str(port), str(demo), "-b", "127.0.0.1"],
+    [sys.executable, "-m", "bunko", str(port), str(demo), "-b", "127.0.0.1"],
     cwd=repo,
     stdout=subprocess.DEVNULL,
     env=ENV,
@@ -70,8 +70,8 @@ def snap(page, name):
 
 with sync_playwright() as p:
     # Google Chrome, not bundled Chromium: Chromium can't play H.264 video.
-    # Set SHELF_E2E_CHROME to use a specific binary.
-    binary = os.environ.get("SHELF_E2E_CHROME")
+    # Set BUNKO_E2E_CHROME to use a specific binary.
+    binary = os.environ.get("BUNKO_E2E_CHROME")
     browser = (
         p.chromium.launch(executable_path=binary, headless=True)
         if binary
@@ -720,8 +720,8 @@ with sync_playwright() as p:
         if page.locator("#places .place").count() == 0:
             break
         page.evaluate(
-            "fetch('/__shelf/api/places', {method: 'POST', body: JSON.stringify({op: 'clear-recent'}),"
-            " headers: {'Content-Type': 'application/json', 'X-Shelf-Request': '1'}})"
+            "fetch('/__bunko/api/places', {method: 'POST', body: JSON.stringify({op: 'clear-recent'}),"
+            " headers: {'Content-Type': 'application/json', 'X-Bunko-Request': '1'}})"
         )
         page.reload()
         page.wait_for_selector("#tree .row")
@@ -1088,7 +1088,7 @@ with sync_playwright() as p:
             probe.bind(("127.0.0.1", 0))
             free = probe.getsockname()[1]
         proc = subprocess.Popen(
-            [sys.executable, "-m", "shelf", str(free), str(demo), "-b", "127.0.0.1", *flags],
+            [sys.executable, "-m", "bunko", str(free), str(demo), "-b", "127.0.0.1", *flags],
             cwd=repo,
             stdout=subprocess.DEVNULL,
             env=ENV,
@@ -1096,7 +1096,7 @@ with sync_playwright() as p:
         atexit.register(proc.terminate)
         for _ in range(100):
             try:
-                urllib.request.urlopen(f"http://127.0.0.1:{free}/__shelf/logout", timeout=1)
+                urllib.request.urlopen(f"http://127.0.0.1:{free}/__bunko/logout", timeout=1)
                 break
             except urllib.error.HTTPError:
                 break

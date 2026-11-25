@@ -1,27 +1,26 @@
 # Roadmap
 
-Where shelf is going, in the order we expect to get there. The reasons behind
+Where Bunko is going, in the order we expect to get there. The reasons behind
 the order are in [Goals and plan](Goals-and-Plan.md), and finished work moves
 to [Phases](Phases.md).
 
 ## Now: publish
 
-- Choose the name, then rename the package, command, and docs.
 - Publish the repository on GitHub, with CI running.
 - First tagged release with the `.pyz` attached.
 
 ## Next: a companion for AI agents
 
-AI coding agents write plans, notes, and HTML reports into the folders shelf
-serves. A few small features make shelf the natural place to read them:
+AI coding agents write plans, notes, and HTML reports into the folders Bunko
+serves. A few small features make Bunko the natural place to read them:
 
-- **`shelf link <path>`** prints the app URL for a file, so an agent can end
+- **`bunko link <path>`** prints the app URL for a file, so an agent can end
   its work with a link instead of a path. A line in an agent's instructions
   (for example `CLAUDE.md`) is enough to use it.
 - **A "Changed recently" section** in the sidebar: files modified in the last
   few hours, so what an agent just wrote is one click away.
 - **Word and Excel in content search.** The text is already extracted for
-  viewing (`shelf/office/`). Content search needs to use it, because ripgrep
+  viewing (`bunko/office/`). Content search needs to use it, because ripgrep
   can't see inside the zip.
 - **Tag rename and delete in the same in-app box** as favorites, replacing the
   browser's prompt and confirm dialogs.
@@ -43,7 +42,7 @@ at that spot.
 3. **Show the answer with sources.** Each claim links to `file:line`, using the
    same links content search results use today (`#/path?line=N&q=...`).
 
-Retrieval stays on the server. The model only sees the passages shelf chose,
+Retrieval stays on the server. The model only sees the passages Bunko chose,
 and the UI shows exactly which ones before anything is sent.
 
 ### Providers
@@ -53,21 +52,21 @@ on the server and never in the browser:
 
 | Provider | How | Data leaves the machine |
 |---|---|---|
-| **Claude** | The official `anthropic` Python SDK (`pip install "shelf-server[claude]"`), Messages API with document content blocks and citations enabled, so answers point to exact passages. The default model would be `claude-opus-5-5`, configurable. | Yes, to Anthropic |
+| **Claude** | The official `anthropic` Python SDK (`pip install "bunko[claude]"`), Messages API with document content blocks and citations enabled, so answers point to exact passages. The default model would be `claude-opus-5-5`, configurable. | Yes, to Anthropic |
 | **OpenAI** | The official `openai` Python SDK | Yes, to OpenAI |
 | **Local** | Any OpenAI-compatible endpoint: Ollama, llama.cpp's server, vLLM, LM Studio | No |
 
 A sketch of the configuration (not final):
 
 ```bash
-ANTHROPIC_API_KEY=... shelf 8100 ~/reports --ask claude
-OPENAI_API_KEY=...    shelf 8100 ~/reports --ask openai --ask-model <model>
-shelf 8100 ~/reports --ask local --ask-url http://localhost:11434/v1 --ask-model <model>
+ANTHROPIC_API_KEY=... bunko 8100 ~/reports --ask claude
+OPENAI_API_KEY=...    bunko 8100 ~/reports --ask openai --ask-model <model>
+bunko 8100 ~/reports --ask local --ask-url http://localhost:11434/v1 --ask-model <model>
 ```
 
 ### Images and video
 
-Vision-capable models, whether hosted or local VLMs, can look at what shelf
+Vision-capable models, whether hosted or local VLMs, can look at what Bunko
 already renders:
 
 - Ask about an image or the current video frame ("is the person in this frame

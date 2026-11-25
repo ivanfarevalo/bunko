@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shelf-server"
+name = "bunko"
 dynamic = ["version"]
 description = "A read-only file server that renders Markdown, HTML, tables, Office files, images, and video in the browser"
 readme = "README.md"
@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 [dependency-groups]
-# Tools for working on shelf. The package itself has no dependencies.
+# Tools for working on bunko. The package itself has no dependencies.
 dev = [
     "ruff==0.17.6; python_version >= '3.10'",
     "pre-commit==4.6.2; python_version >= '3.10'",
@@ -34,27 +34,27 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ivanfarevalo/shelf"
-Documentation = "https://github.com/ivanfarevalo/shelf/tree/main/docs"
-Issues = "https://github.com/ivanfarevalo/shelf/issues"
-Changelog = "https://github.com/ivanfarevalo/shelf/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/ivanfarevalo/bunko"
+Documentation = "https://github.com/ivanfarevalo/bunko/tree/main/docs"
+Issues = "https://github.com/ivanfarevalo/bunko/issues"
+Changelog = "https://github.com/ivanfarevalo/bunko/blob/main/CHANGELOG.md"
 
 [project.scripts]
-shelf = "shelf.cli:main"
+bunko = "bunko.cli:main"
 
 [tool.setuptools]
-packages = ["shelf", "shelf.office"]
+packages = ["bunko", "bunko.office"]
 
 [tool.setuptools.dynamic]
-version = { attr = "shelf.__version__" }
+version = { attr = "bunko.__version__" }
 
 [tool.setuptools.package-data]
-shelf = ["static/*", "static/js/*", "static/js/viewers/*", "static/vendor/*", "static/vendor/LICENSES/*"]
+bunko = ["static/*", "static/js/*", "static/js/viewers/*", "static/vendor/*", "static/vendor/LICENSES/*"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py38"
-extend-exclude = ["shelf/static"]
+extend-exclude = ["bunko/static"]
 
 [tool.ruff.lint]
 select = [
@@ -75,4 +75,4 @@ ignore = [
 allowed-confusables = ["×"]  # the multiplication sign in image dimensions
 
 [tool.ruff.lint.isort]
-known-first-party = ["shelf"]
+known-first-party = ["bunko"]

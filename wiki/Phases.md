@@ -4,6 +4,9 @@ The project's history, from the first question to now. Each phase lists what
 it set out to do, what it delivered, and what it taught us. Release notes for
 users are in the [changelog](../CHANGELOG.md).
 
+The project was called "shelf" until 2026-11-24, when it was renamed Bunko,
+because "shelf" was already taken by several projects.
+
 ## Phase 0: Research (early November 2026)
 
 **Question.** `python -m http.server` is the quickest way to look at files on
@@ -50,7 +53,7 @@ shared tailnet, so access control came first.
   links to an exact moment.
 - ffmpeg thumbnails, JSONL tables, the Markdown outline, and the Settings
   panel.
-- `shelf service` for systemd user services, alongside running in tmux.
+- `bunko service` for systemd user services, alongside running in tmux.
 - Documentation for users: features, security, deployment, and the CLI.
 
 **Learned.** Without care, a test run writes to the real config folder: tests
@@ -61,7 +64,7 @@ now isolate `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`.
 **Delivered.**
 
 - Recent files, favorites, and tags in the sidebar, stored on the server per
-  Tailscale user, through shelf's only write endpoint.
+  Tailscale user, through Bunko's only write endpoint.
 - Collapsible sections, with only the current section's heading sticky.
 - Nicknames for favorites, edited in a small box rather than a browser prompt.
 - Word and Excel files, converted with the standard library.
@@ -74,7 +77,7 @@ by tests.
 
 ## Phase 4: A maintained project (in progress, from 2026-11-24)
 
-**Why.** shelf is meant to be an open-source project others can use and
+**Why.** Bunko is meant to be an open-source project others can use and
 contribute to. That needs a repository, a development setup, and code that is
 easy to read and change.
 
@@ -96,8 +99,10 @@ easy to read and change.
 - A positioning that doesn't lean on any other product: its own palette and
   description.
 - A README that leads with how to launch it, this wiki, and development docs.
+- The new name, **Bunko** (文庫, "a library" in Japanese): the command,
+  package, config folders, URLs, and docs.
 
-**Still open.** The name, and publishing to GitHub.
+**Still open.** Publishing to GitHub and PyPI.
 
 ## What comes next
 
