@@ -271,3 +271,14 @@ Every view has its own URL, so you can bookmark it or send it to someone:
 Raw file URLs stay where `http.server` puts them, so `curl`, `wget`, and links
 inside your own HTML keep working. Raw files support HTTP range requests, which
 is what lets video seek.
+
+**From the command line,** `bunko link PATH` prints the app URL for any file or
+folder a running Bunko serves, and `--line N` adds a line number:
+
+```bash
+$ bunko link experiments/run-12/RESULTS.html
+http://localhost:8000/#/experiments/run-12/RESULTS.html
+```
+
+That's how an AI agent, or any script, can finish with a link to what it just
+wrote. See [the CLI reference](cli.md#bunko-link).

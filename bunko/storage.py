@@ -21,6 +21,12 @@ def cache_dir() -> str:
     return os.path.join(_xdg("XDG_CACHE_HOME", ".cache"), "bunko")
 
 
+def runtime_dir() -> str:
+    """For files that only matter while bunko runs: per user, and cleared at logout where possible."""
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    return os.path.join(runtime, "bunko") if runtime else os.path.join(cache_dir(), "run")
+
+
 def write_private(path: str, text: str) -> None:
     """Replace a file atomically, readable only by its owner from the start."""
     os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)

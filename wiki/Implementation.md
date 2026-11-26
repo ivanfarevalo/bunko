@@ -73,6 +73,7 @@ Nothing is written to the served folder. `storage.py` decides where things go:
 | Recent, favorites, tags | `~/.config/bunko/state/<hash of root>.json`, a section per user |
 | Thumbnails | `~/.cache/bunko/thumbs/`, keyed by path, mtime, and size |
 | Service units | `~/.config/systemd/user/bunko-<name>.service` |
+| Running servers | `$XDG_RUNTIME_DIR/bunko/servers/<pid>.json` (or `~/.cache/bunko/run/`): folder, address, and public URL, for `bunko link`. Removed on exit; a stale one is dropped when its process or port is gone. |
 | Browser preferences | `localStorage`: theme, sidebar width, open folders, collapsed sections, viewer settings |
 
 ## Search

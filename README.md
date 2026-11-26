@@ -90,6 +90,8 @@ that add thumbnails (ffmpeg) and fast content search (ripgrep).
   row numbers and a tab per sheet. No Office or extra packages needed.
 - **Code and logs** with highlighting and line numbers. Large files load in steps.
 - **Live reload.** The open file refreshes when it changes on disk.
+- **Links from the command line.** `bunko link report.html` prints the URL
+  that opens it, so scripts and AI agents can hand you a clickable link.
 - **Access control.** Tailscale identity (recommended) or an access token.
 - **Runs anywhere:** foreground, tmux, or a systemd user service.
 

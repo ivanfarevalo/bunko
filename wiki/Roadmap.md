@@ -14,9 +14,9 @@ to [Phases](Phases.md).
 AI coding agents write plans, notes, and HTML reports into the folders Bunko
 serves. A few small features make Bunko the natural place to read them:
 
-- **`bunko link <path>`** prints the app URL for a file, so an agent can end
-  its work with a link instead of a path. A line in an agent's instructions
-  (for example `CLAUDE.md`) is enough to use it.
+- ~~**`bunko link <path>`**~~ *Done (unreleased):* prints the app URL for a
+  file, so an agent can end its work with a link instead of a path. A line in
+  an agent's instructions (for example `CLAUDE.md`) is enough to use it.
 - **A "Changed recently" section** in the sidebar: files modified in the last
   few hours, so what an agent just wrote is one click away.
 - **Word and Excel in content search.** The text is already extracted for

@@ -18,6 +18,7 @@ port.
 | `-d, --directory DIR` | current folder | Folder to serve |
 | `-b, --bind ADDR` | `127.0.0.1` | Address to listen on. The default keeps it to this machine; a Tailscale IP limits it to the tailnet; `0.0.0.0` opens it to every network. |
 | `--hidden` | off | Also list and serve dotfiles |
+| `--public-url URL` | worked out | The address people use to reach this server, for [`bunko link`](#bunko-link). Set it behind a reverse proxy, or when the guess is wrong. |
 | `--no-thumbnails` | off | Don't run ffmpeg for gallery thumbnails |
 | `--cache-dir DIR` | `~/.cache/bunko` | Where thumbnails are cached |
 | `-v, --verbose` | off | Log every request to stderr |
@@ -35,6 +36,26 @@ See [security.md](security.md). `--allow-user` and `--token` can't be combined.
 | `--token-file PATH` | Where the token lives (default `~/.config/bunko/token`) |
 
 The `BUNKO_TOKEN` environment variable, when set, overrides the token file.
+
+## `bunko link`
+
+Prints the URL that opens a file or folder in the running Bunko that serves
+it. Useful in scripts, and for AI agents, which can end their work with a
+link to the report they just wrote.
+
+| Command | Does |
+|---|---|
+| `bunko link report/RESULTS.html` | The app URL for that file |
+| `bunko link train.log --line 420` | Opens a text file at line 420 |
+| `bunko link` | The current folder |
+| `bunko servers` | Every running server, with its URL and folder |
+
+Each server records its folder and URL in `$XDG_RUNTIME_DIR/bunko/servers/`
+(or `~/.cache/bunko/run/servers/`) while it runs. When folders nest, the
+innermost server wins. The URL is `--public-url` if one was given; your
+Tailscale HTTPS name under `--allow-user`, when `tailscale` can report it;
+otherwise the address the server listens on. `bunko link` exits with status 1,
+and says why, when no running server serves the path or the path is hidden.
 
 ## `bunko token`
 
@@ -67,6 +88,7 @@ See [deployment.md](deployment.md#as-a-systemd-user-service).
 | `BUNKO_TOKEN` | Use this token instead of the token file |
 | `XDG_CONFIG_HOME` | Base for `bunko/token`, `bunko/state/`, and systemd user units (default `~/.config`) |
 | `XDG_CACHE_HOME` | Base for `bunko/thumbs` (default `~/.cache`) |
+| `XDG_RUNTIME_DIR` | Base for `bunko/servers/`, the records `bunko link` reads (default `~/.cache/bunko/run`) |
 
 ## HTTP endpoints
 

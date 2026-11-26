@@ -29,13 +29,14 @@ with socket.socket() as probe:
     probe.bind(("127.0.0.1", 0))
     port = probe.getsockname()[1]
 base = f"http://127.0.0.1:{port}"
-# Keep favorites, recents and thumbnails out of the real ~/.config and ~/.cache.
+# Keep favorites, recents, thumbnails and server records out of the real ~/.config, ~/.cache, and runtime folder.
 scratch = tempfile.mkdtemp(prefix="bunko-e2e-")
 atexit.register(shutil.rmtree, scratch, True)
 ENV = dict(
     os.environ,
     XDG_CONFIG_HOME=os.path.join(scratch, "config"),
     XDG_CACHE_HOME=os.path.join(scratch, "cache"),
+    XDG_RUNTIME_DIR=os.path.join(scratch, "run"),
 )
 server = subprocess.Popen(
     [sys.executable, "-m", "bunko", str(port), str(demo), "-b", "127.0.0.1"],
@@ -390,6 +391,20 @@ with sync_playwright() as p:
     check("awkward file name opens", page.locator(".md h1").inner_text() == "Awkward name")
     row = page.locator("#tree .row.current")
     check("tree marks it", "Awkward" in page.locator(".md h1").inner_text() and row.count() == 1)
+    linked = subprocess.run(
+        [sys.executable, "-m", "bunko", "link", str(demo / "a b#c?d%e & café.md")],
+        cwd=repo,
+        env=ENV,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    page.goto(linked)
+    page.wait_for_selector(".md h1")
+    check(
+        "bunko link opens the same file",
+        page.locator(".md h1").inner_text() == "Awkward name",
+        linked,
+    )
     go("linked/external.md")
     page.wait_for_selector(".md h1")
     check("symlink out of root opens", page.locator(".md h1").inner_text() == "External")

@@ -46,6 +46,7 @@ bunko/
     common.py       reading the zip and XML safely
     word.py         .docx to HTML
     excel.py        .xlsx to rows
+  registry.py       records of running servers, for `bunko link`
   service.py        `bunko service`: systemd user units
   storage.py        where bunko keeps its own config, state, and cache
   static/

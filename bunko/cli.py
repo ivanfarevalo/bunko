@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import socket
 import sys
 
-from . import __version__
+from . import __version__, registry
 from .access import Access, TokenStore, is_loopback
 from .contents import ContentSearch
 from .index import SearchIndex
@@ -25,6 +26,8 @@ EPILOG = """examples:
                                  reachable from any network, with an access token
 
 subcommands:
+  bunko link PATH [--line N]                                 print the URL that opens PATH in a running bunko
+  bunko servers                                              list the running servers
   bunko service install|uninstall|status|logs|restart|list   run as a systemd user service
   bunko token [--new] [--port N]                             show or replace the access token
 
@@ -48,6 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="address to listen on (default: 127.0.0.1, this machine only; 0.0.0.0 for every network)",
     )
     parser.add_argument("--hidden", action="store_true", help="also show and serve dotfiles")
+    parser.add_argument(
+        "--public-url",
+        metavar="URL",
+        help="the address people use to reach this server, for `bunko link` (e.g. behind a proxy)",
+    )
 
     access = parser.add_argument_group("access control (see docs/security.md)")
     access.add_argument(
@@ -97,10 +105,12 @@ def parse_args(argv=None):
         args.token = True
     if args.allow_user and args.token:
         parser.error("choose one of --allow-user and --token")
+    if args.public_url and not args.public_url.startswith(("http://", "https://")):
+        parser.error("--public-url must start with http:// or https://")
     if args.allow_user and not is_loopback(args.bind):
         parser.error(
             "--allow-user trusts identity headers from `tailscale serve`, so bunko must listen "
-            "only on loopback. Add -b 127.0.0.1 (see docs/security.md)."
+            "only on loopback. Leave out -b, or use -b 127.0.0.1 (see docs/security.md)."
         )
     return args
 
@@ -136,17 +146,64 @@ def main(argv=None) -> None:
         return service_main(argv[1:])
     if argv[:1] == ["token"]:
         return token_command(argv[1:])
+    if argv[:1] == ["link"]:
+        return link_command(argv[1:])
+    if argv[:1] == ["servers"]:
+        return servers_command(argv[1:])
 
     args = parse_args(argv)
     server = build_server(args)
     print_banner(server, args)
+    port = server.server_address[1]
+    url = args.public_url or registry.public_url(args.bind, port, access_mode(args))
+    record = registry.register(
+        server.RequestHandlerClass.root.real, args.hidden, args.bind, port, url
+    )
+    # systemd stops services with SIGTERM; exiting through Python lets `finally` clean up.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        registry.unregister(record)
         server.server_close()
     return None
+
+
+def link_command(argv) -> None:
+    parser = argparse.ArgumentParser(
+        prog="bunko link",
+        description="Print the URL that opens a file or folder in the running bunko that serves it.",
+    )
+    parser.add_argument("path", nargs="?", default=".", help="file or folder (default: current)")
+    parser.add_argument("--line", type=int, metavar="N", help="open a text file at this line")
+    args = parser.parse_args(argv)
+    path = os.path.expanduser(args.path)
+    if not os.path.exists(path):
+        sys.exit(f"bunko link: no such file or folder: {args.path}")
+    found = registry.server_for(path, registry.running())
+    if found is None:
+        folder = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+        sys.exit(
+            f"bunko link: no running bunko serves {os.path.abspath(path)}\n"
+            f"  start one with: bunko {folder}"
+        )
+    record, rel = found
+    if registry.is_hidden(rel) and not record["hidden"]:
+        sys.exit(f"bunko link: {rel} is a dotfile path, which the server at {record['url']} hides")
+    print(registry.app_url(record["url"], rel, args.line))
+
+
+def servers_command(argv) -> None:
+    argparse.ArgumentParser(
+        prog="bunko servers", description="List the running servers."
+    ).parse_args(argv)
+    records = registry.running()
+    for record in records:
+        print(f"{record['url']}  {record['root']}  (pid {record['pid']})")
+    if not records:
+        print("No bunko servers running.")
 
 
 def access_mode(args) -> str:

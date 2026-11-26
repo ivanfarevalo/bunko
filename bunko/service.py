@@ -52,6 +52,8 @@ def serve_arguments(args: list) -> list:
     out += ["--bind", parsed.bind]
     if parsed.hidden:
         out.append("--hidden")
+    if parsed.public_url:
+        out += ["--public-url", parsed.public_url]
     for user in parsed.allow_user:
         out += ["--allow-user", user]
     if parsed.token:

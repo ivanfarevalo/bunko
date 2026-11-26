@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **`bunko link PATH`** prints the URL that opens a file or folder in the
+  running Bunko that serves it, with `--line N` for text files. `bunko servers`
+  lists the running servers. Scripts and AI agents can now end with a link.
+- **`--public-url`** sets the address `bunko link` uses, for servers behind a
+  proxy. Under `--allow-user`, Bunko uses your Tailscale HTTPS name.
+
 ## 0.3.0
 
 - **Renamed from shelf to Bunko.** The command and package are `bunko`, its
