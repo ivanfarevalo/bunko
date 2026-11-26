@@ -21,7 +21,9 @@ the [README](../README.md) covers installing and launching.
   with CI on Linux and macOS and a tag-driven release workflow.
 - Renamed from "shelf" to **Bunko** (文庫, "a library" or "a collection of
   books" in Japanese) on 2026-11-24.
-- Next up: the first release to PyPI, then the companion for AI agents.
+- Released 0.3.0 on 2026-11-26: `uvx bunko`, `uv tool install bunko`, or the
+  `install.sh` one-liner.
+- Next up: the companion for AI agents.
 
 ## Keeping the wiki current
 

@@ -109,7 +109,8 @@ easy to read and change.
 - Listening on 127.0.0.1 by default, and a release workflow: PyPI by trusted
   publishing, a GitHub release with `bunko.pyz`, and an `install.sh` one-liner.
 
-**Still open.** The first tagged release.
+- **Released 0.3.0** on 2026-11-26: on PyPI (`uvx bunko`), and as a GitHub
+  release with `bunko.pyz` and the `install.sh` one-liner.
 
 ## What comes next
 
