@@ -12,6 +12,7 @@ the [README](../README.md) covers installing and launching.
 | [Implementation](Implementation.md) | How it's built: the server, the browser app, storage, security, and key decisions |
 | [Phases](Phases.md) | The project's history, phase by phase, from the first research to now |
 | [Roadmap](Roadmap.md) | What's next, including "ask your files" with LLMs |
+| [Report design](Report-Design.md) | The agreed design for `/report` and `bunko report` |
 
 ## Status
 

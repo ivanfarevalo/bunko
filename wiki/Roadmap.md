@@ -17,6 +17,9 @@ serves. A few small features make Bunko the natural place to read them:
 - ~~**`bunko link <path>`**~~ *Done (unreleased):* prints the app URL for a
   file, so an agent can end its work with a link instead of a path. A line in
   an agent's instructions (for example `CLAUDE.md`) is enough to use it.
+- **Reports: `/report` and `bunko report`.** Agent-written HTML reports in a
+  consistent, configurable style and layout, ending with the Bunko link. See
+  [Report design](Report-Design.md).
 - **A "Changed recently" section** in the sidebar: files modified in the last
   few hours, so what an agent just wrote is one click away.
 - **Word and Excel in content search.** The text is already extracted for
@@ -93,6 +96,9 @@ These hold before anything ships:
   afterthought, for folders that must not leave the machine.
 
 ## Later: team use
+
+- **Several folders in one server,** each a named top-level entry, instead of
+  symlinks or several servers.
 
 What a team or organization would need beyond today's access modes:
 
