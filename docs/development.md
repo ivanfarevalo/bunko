@@ -47,6 +47,9 @@ bunko/
     word.py         .docx to HTML
     excel.py        .xlsx to rows
   registry.py       records of running servers, for `bunko link`
+  report/           `bunko report`: settings, themes, workspaces, checks
+    themes/house/   the built-in theme
+  skills/           skills for agents (report/SKILL.md) and `bunko skill install`
   service.py        `bunko service`: systemd user units
   storage.py        where bunko keeps its own config, state, and cache
   static/

@@ -49,7 +49,7 @@ include = ["bunko*"]
 version = { attr = "bunko.__version__" }
 
 [tool.setuptools.package-data]
-"*" = ["*.html", "*.css", "*.js", "*.txt"]
+"*" = ["*.html", "*.css", "*.js", "*.txt", "*.md"]
 
 [tool.ruff]
 line-length = 100

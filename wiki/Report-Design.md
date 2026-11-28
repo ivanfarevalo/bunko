@@ -1,6 +1,6 @@
 # Design: reports (`/report` and `bunko report`)
 
-Status: agreed 2026-11-28, not built yet. Phases are at the end. Change this page
+Status: agreed 2026-11-28; phase 1 built the same day (see docs/reports.md). Phases are at the end. Change this page
 when a decision changes, and say why.
 
 ## What it's for
@@ -107,7 +107,7 @@ The defaults should stay loose. Revisit them after real use.
 - The theme's CSS is inlined into each report, so reports open from disk and
   travel as one file.
 - Semantic colors get general names (`--good`, `--info`, `--warn`, `--bad`,
-  `--muted`), keeping the old ones (`--fg-c`, `--bg-c`, `--fade-c`, `--abs-c`)
+  `--neutral`), keeping the old ones (`--fg-c`, `--bg-c`, `--fade-c`, `--abs-c`)
   as aliases.
 
 ## Commands
@@ -168,7 +168,7 @@ The Bunko command-line tool does the work in both cases.
 
 ## Phases
 
-1. **Core**
+1. **Core** (built 2026-11-28)
    - The config store, at user and project level, with `init`, `config`,
      `kind`, `layout`, and `theme`.
    - The house theme as the built-in default.

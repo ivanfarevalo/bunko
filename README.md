@@ -90,6 +90,9 @@ that add thumbnails (ffmpeg) and fast content search (ripgrep).
   row numbers and a tab per sheet. No Office or extra packages needed.
 - **Code and logs** with highlighting and line numbers. Large files load in steps.
 - **Live reload.** The open file refreshes when it changes on disk.
+- **Reports, for people and AI agents.** `/report` in Claude Code or Codex writes
+  up your work as an HTML report in a consistent theme and folder layout, checks
+  it, and hands you the link. Kinds, layouts, and themes are yours to change.
 - **Links from the command line.** `bunko link report.html` prints the URL
   that opens it, so scripts and AI agents can hand you a clickable link.
 - **Access control.** Tailscale identity (recommended) or an access token.
@@ -130,6 +133,7 @@ sudo tailscale serve --bg --https=8100 http://127.0.0.1:8100
 - [Security and access control](https://github.com/ivanfarevalo/bunko/blob/main/docs/security.md)
 - [Deployment: tmux, systemd, remote machines](https://github.com/ivanfarevalo/bunko/blob/main/docs/deployment.md)
 - [Command-line reference](https://github.com/ivanfarevalo/bunko/blob/main/docs/cli.md)
+- [Reports and the /report skill](https://github.com/ivanfarevalo/bunko/blob/main/docs/reports.md)
 - [Development: environment, linters, tests, practices](https://github.com/ivanfarevalo/bunko/blob/main/docs/development.md)
 
 The [project wiki](https://github.com/ivanfarevalo/bunko/blob/main/wiki/Home.md) tracks what Bunko is, where it's going, how

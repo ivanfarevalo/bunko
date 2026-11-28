@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Reports.** `bunko report` makes HTML reports in a consistent theme and
+  folder layout, and checks them. `/report`, installed with `bunko skill
+  install`, lets Claude Code and Codex write up your work that way and hand
+  you the link. Kinds of report, workspace layouts, and themes are settings
+  you change with commands, or by asking your agent, per user or per project.
+  The built-in house theme has a side table of contents, light and dark modes,
+  an expandable embedded-player frame, and a collapsed "How this was made"
+  panel. See docs/reports.md.
 - **`bunko link PATH`** prints the URL that opens a file or folder in the
   running Bunko that serves it, with `--line N` for text files. `bunko servers`
   lists the running servers. Scripts and AI agents can now end with a link.

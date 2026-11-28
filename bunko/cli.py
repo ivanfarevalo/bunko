@@ -28,6 +28,8 @@ EPILOG = """examples:
 subcommands:
   bunko link PATH [--line N]                                 print the URL that opens PATH in a running bunko
   bunko servers                                              list the running servers
+  bunko report new|list|check|init|config|kind|layout|theme  make and check reports (see docs/reports.md)
+  bunko skill install                                        install /report for Claude Code and Codex
   bunko service install|uninstall|status|logs|restart|list   run as a systemd user service
   bunko token [--new] [--port N]                             show or replace the access token
 
@@ -150,6 +152,14 @@ def main(argv=None) -> None:
         return link_command(argv[1:])
     if argv[:1] == ["servers"]:
         return servers_command(argv[1:])
+    if argv[:1] == ["skill"]:
+        from .skills import main as skill_main
+
+        return skill_main(argv[1:])
+    if argv[:1] == ["report"]:
+        from .report.cli import main as report_main
+
+        return report_main(argv[1:])
 
     args = parse_args(argv)
     server = build_server(args)

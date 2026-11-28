@@ -6,6 +6,7 @@ uv run python tests/e2e.py DEMO SHOTS_DIR
 """
 
 import atexit
+import json
 import os
 import pathlib
 import shutil
@@ -1102,6 +1103,56 @@ with sync_playwright() as p:
     mobile.wait_for_timeout(350)
     check("choosing a file closes the drawer", mobile.locator("#sidebar").bounding_box()["x"] < 0)
     phone.close()
+
+    print("reports")
+
+    def bunko(*args):
+        done = subprocess.run(
+            [sys.executable, "-m", "bunko", *args],
+            cwd=repo,
+            env=ENV,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return json.loads(done.stdout)
+
+    bunko("report", "init", "--root", str(demo / "reports"))
+    made = bunko("report", "new", "explainer", "How the demo works", "--workspace", "demo notes")
+    check(
+        "report new links to the running server",
+        made["link"] and made["link"].endswith("how-the-demo-works.html"),
+        made,
+    )
+    page.goto(made["link"])
+    report = page.frame_locator("iframe.page-frame")
+    report.locator("h1").wait_for()
+    check(
+        "report renders in the house theme",
+        report.locator("h1").inner_text() == "How the demo works",
+    )
+    check(
+        "every section is in the contents",
+        report.locator("nav.toc a").count() == report.locator("section.lesson").count() == 4,
+    )
+    check(
+        "provenance starts collapsed",
+        report.locator("details.provenance").get_attribute("open") is None,
+    )
+    report.locator("nav.toc a").nth(2).click()
+    page.wait_for_timeout(200)
+    check("contents links stay inside the report", page.url == made["link"], page.url)
+    snap(page, "26-report")
+    disk = context.new_page()
+    disk_errors = []
+    disk.on("pageerror", lambda error: disk_errors.append(str(error)))
+    disk.goto(pathlib.Path(made["report"]).as_uri())
+    check(
+        "the report opens straight from disk",
+        disk.locator("h1").inner_text() == "How the demo works",
+    )
+    check("no script errors from disk", not disk_errors, disk_errors)
+    disk.close()
 
     # Console noise that the deliberately broken fixtures cause on purpose.
     # The malicious fixtures try a frame escape and inline handlers; the browser

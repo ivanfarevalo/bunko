@@ -57,6 +57,11 @@ Tailscale HTTPS name under `--allow-user`, when `tailscale` can report it;
 otherwise the address the server listens on. `bunko link` exits with status 1,
 and says why, when no running server serves the path or the path is hidden.
 
+## `bunko report` and `bunko skill`
+
+Making and checking reports, and installing the `/report` skill for agents:
+see [reports.md](reports.md).
+
 ## `bunko token`
 
 | Command | Does |

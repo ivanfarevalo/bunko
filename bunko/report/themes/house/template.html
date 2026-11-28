@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{title}}</title>
+{{meta}}
+<script>
+{{script}}
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Literata:opsz,wght@7..72,600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+{{style}}
+</style>
+<div class="wrap" id="top">
+  <nav class="toc" aria-label="Contents"><ol>
+<!-- bunko:contents -->
+{{contents}}
+<!-- /bunko:contents -->
+  </ol></nav>
+  <main>
+    <header><div class="kicker">{{kicker}}</div><h1>{{title}}</h1><p>{{summary}}</p></header>
+{{sections}}
+<!-- bunko:provenance -->
+{{provenance}}
+<!-- /bunko:provenance -->
+  </main>
+</div>

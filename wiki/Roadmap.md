@@ -17,7 +17,7 @@ serves. A few small features make Bunko the natural place to read them:
 - ~~**`bunko link <path>`**~~ *Done (unreleased):* prints the app URL for a
   file, so an agent can end its work with a link instead of a path. A line in
   an agent's instructions (for example `CLAUDE.md`) is enough to use it.
-- **Reports: `/report` and `bunko report`.** Agent-written HTML reports in a
+- ~~**Reports: `/report` and `bunko report`.**~~ *Phase 1 done (unreleased).* Next: `bundle`, the Reports sidebar section, then the plugin. Agent-written HTML reports in a
   consistent, configurable style and layout, ending with the Bunko link. See
   [Report design](Report-Design.md).
 - **A "Changed recently" section** in the sidebar: files modified in the last
