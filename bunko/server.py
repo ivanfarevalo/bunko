@@ -246,7 +246,9 @@ class Handler(BaseHTTPRequestHandler):
         if os.path.isdir(real):
             return self.directory(real, path, in_frame)
         if os.path.isfile(real):
-            return self.send_file(real)
+            return self.send_file(
+                real, kind=content_type(path)
+            )  # by the requested name: a symlink's target may have none
         return self.not_found()
 
     def refuse(self, decision, path: str, navigating: bool) -> None:

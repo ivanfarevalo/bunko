@@ -50,6 +50,10 @@ class ServerCase(unittest.TestCase):
         (root / "sneaky").symlink_to(root / ".ssh")
         (root / "sneaky_out").symlink_to(secret)
         (root / "dangling").symlink_to(base / "gone")
+        (outside / "blob-0d81e2").write_bytes(
+            b"\x00\x00\x00\x18ftypmp42"
+        )  # a content-addressed cache entry
+        (root / "clip.mp4").symlink_to(outside / "blob-0d81e2")
         cls.root = root
 
         bunko_root = Root(str(root), cls.hidden)
@@ -131,6 +135,13 @@ class Access(ServerCase):
         names = [entry["name"] for entry in data["entries"]]
         self.assertNotIn("sneaky", names)
         self.assertNotIn("sneaky_out", names)
+
+    def test_symlink_type_comes_from_its_own_name(self):
+        # Caches such as DVC's link clip.mp4 to an entry with no extension.
+        response, body = self.get("/clip.mp4", headers={"Range": "bytes=0-3"})
+        self.assertEqual(response.status, 206)
+        self.assertEqual(response.getheader("Content-Type"), "video/mp4")
+        self.assertEqual(body, b"\x00\x00\x00\x18")
 
     def test_symlink_out_of_root_works(self):
         response, body = self.get("/linked/report.txt")

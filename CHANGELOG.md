@@ -10,6 +10,9 @@
   The built-in house theme has a side table of contents, light and dark modes,
   an expandable embedded-player frame, and a collapsed "How this was made"
   panel. See docs/reports.md.
+- Fix: a symlinked file is served with the type its own name implies, not its
+  target's. Content-addressed caches such as DVC's link `clip.mp4` to an entry
+  with no extension, which came back as `application/octet-stream`.
 - **`bunko link PATH`** prints the URL that opens a file or folder in the
   running Bunko that serves it, with `--line N` for text files. `bunko servers`
   lists the running servers. Scripts and AI agents can now end with a link.
